@@ -19,5 +19,10 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             CategorySeeder::class,
         ]);
+
+        // Region data (~245k records) is opt-in to avoid slow default seeds.
+        if (filter_var(env('SEED_REGIONS', false), FILTER_VALIDATE_BOOLEAN)) {
+            $this->call(RegionSeeder::class);
+        }
     }
 }

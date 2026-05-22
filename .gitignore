@@ -22,6 +22,9 @@
 /public/hot
 /public/storage
 /storage/*.key
+/storage/app/regions/**/*.json
+/storage/app/regions/**/*.gz
+/storage/app/regions/**/*.zip
 /storage/pail
 /vendor
 _ide_helper.php

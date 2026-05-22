@@ -113,14 +113,16 @@ Rencana pembagian sesi kerja untuk implementasi Laravel Starter via Claude Code.
 4. **Authorization enforcement:** Policy untuk `User`/`Role` dipakai baik di API maupun Filament.
 5. **Tests:** feature test CRUD user/role (back-office) + profil API + pengecekan permission (403 untuk yang tak berhak).
 
-**Output / Deliverable:**
-- [ ] Admin mengelola user & role sepenuhnya dari `/admin`.
-- [ ] Assign role/permission berfungsi & langsung berdampak ke authorization.
-- [ ] Endpoint profil API berfungsi; user lain tak bisa mengubah profil orang lain.
-- [ ] Tests hijau.
-- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Output / Deliverable:** ✅ **SELESAI** (2026-05-22)
+- [x] Admin mengelola user & role sepenuhnya dari `/admin`.
+- [x] Assign role/permission berfungsi & langsung berdampak ke authorization.
+- [x] Endpoint profil API berfungsi; user lain tak bisa mengubah profil orang lain.
+- [x] Tests hijau (26 tests total).
+- [x] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**File dibuat/diubah:** `app/Filament/Resources/UserResource.php`, `RoleResource.php`, `app/Policies/UserPolicy.php`, `RolePolicy.php`, `app/Http/Resources/Api/V1/UserResource.php`, update `AuthController`, Form Requests terkait, tests.
+**File dibuat/diubah:** `app/Filament/Resources/Users/*`, `app/Filament/Resources/Roles/*`, `app/Policies/UserPolicy.php`, `RolePolicy.php`, `app/Http/Resources/Api/V1/UserResource.php`, update `AuthController`, `UpdateProfileRequest`, `ChangePasswordRequest`, `routes/api.php`, tests (`ProfileTest`, `UserRoleManagementTest`).
+
+> **Catatan implementasi:** User/Role dikelola lewat Filament resource yang memakai policy RBAC. Endpoint profil ditambah di bawah `auth:api`: `PUT /api/v1/auth/me` dan `POST /api/v1/auth/change-password`. Password user tetap di-hash oleh cast model `User`.
 
 ---
 
@@ -142,14 +144,15 @@ Rencana pembagian sesi kerja untuk implementasi Laravel Starter via Claude Code.
 3. **Dokumentasi pola "Menambah Data Master Baru":**
    - Tulis panduan langkah-demi-langkah (migrasi → model → policy → API controller/requests/resource → Filament resource → tests) di `docs/` atau README.
    - Tujuan: dev/sesi berikutnya bisa menyalin pola dengan cepat.
+   - Implementasi: [DATA_MASTER_PATTERN.md](DATA_MASTER_PATTERN.md).
 4. **Tests:** feature test API CRUD (termasuk filter/sort & authorization) + smoke test Filament resource.
 
 **Output / Deliverable:**
-- [ ] CRUD `Category` berfungsi penuh di API & back-office, dengan filter/sort/pagination konsisten.
-- [ ] Authorization (RBAC) ditegakkan di kedua jalur.
-- [ ] Dokumentasi pola data master tersedia & jelas.
-- [ ] Tests hijau.
-- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+- [x] CRUD `Category` berfungsi penuh di API & back-office, dengan filter/sort/pagination konsisten.
+- [x] Authorization (RBAC) ditegakkan di kedua jalur.
+- [x] Dokumentasi pola data master tersedia & jelas.
+- [x] Tests hijau.
+- [x] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 **File dibuat/diubah:** migrasi/model `Category` (jika belum lengkap dari Sesi 1), `CategoryController`, Form Requests, `CategoryResource`, `CategoryPolicy`, `app/Filament/Resources/CategoryResource.php`, dokumentasi pola, tests.
 
@@ -166,18 +169,110 @@ Rencana pembagian sesi kerja untuk implementasi Laravel Starter via Claude Code.
 2. **Branding panel** (nama app, logo, warna).
 3. **Auth nice-to-have:** password reset (API + back-office), email verification.
 4. **Kualitas:** lengkapi feature/unit tests hingga cakupan modul inti memadai; pastikan Pint & Larastan bersih.
-5. **API docs** (opsional): Scribe/OpenAPI untuk tim Flutter.
+5. **API docs dengan Scramble** (OpenAPI otomatis untuk tim Flutter):
+   - Install `dedoc/scramble` sebagai dependency dokumentasi API.
+   - Publish/atur konfigurasi Scramble agar hanya mendokumentasikan route `api/v1`.
+   - Set metadata OpenAPI: title `Laravel Starter API`, version awal, server URL lokal, dan deskripsi singkat.
+   - Konfigurasi security scheme **Bearer token** untuk endpoint Passport (`Authorization: Bearer <token>`).
+   - Pastikan endpoint dokumentasi tersedia, misalnya `GET /docs/api` (UI) dan `GET /docs/api.json` (OpenAPI JSON).
+   - Pastikan schema request terbaca dari Form Request (`LoginRequest`, `StoreCategoryRequest`, dll.).
+   - Pastikan response utama terbaca dari API Resource/envelope standar; tambah PHPDoc/attribute hanya bila Scramble tidak bisa infer otomatis.
+   - Tambahkan smoke test untuk `/docs/api` dan `/docs/api.json` pada environment yang sesuai.
+   - Update README dengan cara membuka dokumentasi API dan cara share OpenAPI JSON ke tim Flutter/Postman.
 6. **Finalisasi README** bagian "Cara Menjalankan" dengan langkah & kredensial seeder konkret.
 7. **CI** (opsional): GitHub Actions untuk lint + test.
 
 **Output / Deliverable:**
-- [ ] Dashboard & branding back-office tampil.
-- [ ] Dokumentasi "Cara Menjalankan" lengkap & teruji dari nol.
-- [ ] Suite test hijau; Pint & Larastan bersih.
-- [ ] (Opsional) API docs & CI aktif.
+- [x] Dashboard & branding back-office tampil.
+- [x] Dokumentasi "Cara Menjalankan" lengkap & teruji dari nol.
+- [x] Suite test hijau; Pint & Larastan bersih.
+- [x] API docs Scramble aktif dan OpenAPI JSON bisa diakses.
+- [ ] (Opsional) CI aktif.
 - [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**File dibuat/diubah:** widget Filament, konfigurasi panel, fitur auth tambahan, README, (opsional) `.github/workflows/ci.yml`, file docs API.
+**File dibuat/diubah:** widget Filament, konfigurasi panel, fitur auth tambahan, README, konfigurasi Scramble, tests dokumentasi API, (opsional) `.github/workflows/ci.yml`.
+
+---
+
+## Sesi 6 — Seeder Wilayah: Negara & Wilayah Indonesia 🟨
+
+**Tujuan:** Menyediakan data master wilayah — semua negara + provinsi/state + kota untuk seluruh dunia, dan data wilayah Indonesia lengkap hingga kelurahan/desa — dalam **satu tabel `regions` self-referencing**, untuk kebutuhan form alamat di app Flutter.
+
+**Dependency:** Sesi 1 selesai (PostgreSQL running); mengikuti pola data master dari Sesi 4.
+
+**Sumber Data:**
+- **Seluruh dunia** (sampai kota): [`dr5hn/countries-states-cities-database`](https://github.com/dr5hn/countries-states-cities-database) — Country → State → City
+- **Indonesia** (sampai kelurahan): [`emsifa/api-wilayah-indonesia`](https://github.com/emsifa/api-wilayah-indonesia) — Provinsi → Kabupaten/Kota → Kecamatan → Kelurahan/Desa
+
+**Skema Database — tabel tunggal `regions` (self-referencing):**
+
+```
+regions
+  id            bigint PK
+  parent_id     bigint FK → regions.id (nullable — null berarti negara/root)
+  type          enum: country | state | city | district | village
+  code          varchar nullable  -- ISO2 untuk negara; kode BPS untuk wilayah Indonesia
+  name          varchar
+  phone_code    varchar nullable  -- diisi untuk type=country; null untuk level lain
+  meta          jsonb nullable    -- data ekstra per-type (iso3, currency, emoji, dll.)
+  created_at / updated_at
+```
+
+Index: `parent_id`, `type`, `code`, `phone_code`, composite `(type, code)`.
+
+**Mapping type per sumber:**
+
+| type | Asal data | Estimasi record |
+|------|-----------|-----------------|
+| `country` | dr5hn | ±250 |
+| `state` | dr5hn (non-ID) + emsifa (ID) | ±5 000 |
+| `city` | dr5hn (non-ID) + emsifa kabupaten/kota (ID) | ±150 000 |
+| `district` | emsifa kecamatan — Indonesia saja | ±7 200 |
+| `village` | emsifa kelurahan/desa — Indonesia saja | ±83 000 |
+
+**Kolom `meta` (jsonb) — contoh isi per type:**
+- `country`: `{ iso3, capital, currency, currency_symbol, region, subregion, emoji, latitude, longitude }`
+- `state`: `{ latitude, longitude }` (opsional)
+- `city` non-ID: `{ latitude, longitude }` (opsional)
+- `city` Indonesia: `{ type: "kabupaten"|"kota" }` ⚠️ bedakan dari enum `type` tabel
+
+**Tugas:**
+1. **Migrasi** tabel `regions` dengan kolom di atas; tambahkan index yang diperlukan.
+2. **Model `Region`** dengan relasi self-referencing:
+   - `parent(): BelongsTo` → `Region`
+   - `children(): HasMany` → `Region`
+   - Scope helper: `scopeCountries()`, `scopeStates()`, `scopeCities()`, dll.
+3. **Command `php artisan regions:download`:**
+   - Download JSON dari kedua sumber dan simpan ke `storage/app/regions/` (cache lokal — gitignore folder ini).
+   - File dr5hn: `countries.json`, `states.json` (raw GitHub `json/`) + `cities.json` dari release gzip terbaru.
+   - File emsifa: `provinces.json` + loop per-provinsi untuk `regencies/{id}.json`, `districts/{id}.json`, `villages/{id}.json` via `https://emsifa.github.io/api-wilayah-indonesia/api/`.
+   - Tampilkan progress; lewati file yang sudah ada (idempoten).
+4. **Seeder** — semua insert ke tabel `regions`, dijalankan lewat `RegionSeeder` sebagai orchestrator:
+   - `CountrySeeder` — insert negara dari dr5hn (`type=country`, `meta` berisi iso3/phone_code/dll.).
+   - `StateSeeder` — insert state dr5hn (non-ID) + provinsi emsifa untuk Indonesia (`type=state`, `parent_id` → id negara bersangkutan).
+   - `CitySeeder` — insert cities dr5hn (non-ID) + kabupaten/kota emsifa (ID) (`type=city`, `parent_id` → id state).
+   - `DistrictSeeder` — insert kecamatan emsifa (`type=district`, `parent_id` → id city Indonesia, ±7 200 record).
+   - `VillageSeeder` — insert kelurahan/desa emsifa (`type=village`, `parent_id` → id district, ±83 000 record) dengan **chunked bulk insert** (chunk 500–1 000) ⚠️.
+   - Setiap seeder menyimpan mapping `kode_sumber → id` di memori untuk resolve `parent_id` tanpa query per-record.
+5. **Daftarkan** di `DatabaseSeeder` dengan guard `SEED_REGIONS=true` di `.env` supaya `migrate --seed` biasa tidak memuat ±245 000 record secara default.
+6. **Command `php artisan regions:seed`** — shortcut dengan progress bar per-level; lebih ergonomis dari `db:seed --class=RegionSeeder`.
+7. **(Opsional) Endpoint API read-only** untuk lookup cascading di form Flutter:
+   - `GET /api/v1/regions?type=country`
+   - `GET /api/v1/regions?parent_id={id}` (universal — satu endpoint untuk semua level)
+8. **Tests:**
+   - Smoke test seeder: assert count per type sesuai estimasi. ⚠️ Skip otomatis jika file JSON belum di-download.
+   - Test relasi: `Region::countries()->first()->children` mengembalikan states; chain sampai ke village untuk data Indonesia.
+
+**Output / Deliverable:** ✅ **SELESAI** (2026-05-23)
+- [x] Migrasi tabel `regions` berjalan tanpa error.
+- [x] `php artisan regions:download` berhasil mengambil semua file JSON.
+- [x] `php artisan regions:seed` berhasil; count per type sesuai estimasi.
+- [x] Relasi self-referencing dapat di-traverse via Eloquent hingga level village (Indonesia).
+- [x] `DatabaseSeeder` normal tidak memuat region kecuali `SEED_REGIONS=true`.
+- [x] Tests hijau (minimal smoke test count + relasi).
+- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+**File dibuat/diubah:** migrasi (`regions`), model `Region`, `app/Console/Commands/RegionsDownloadCommand.php`, `app/Console/Commands/RegionsSeedCommand.php`, seeder (CountrySeeder, StateSeeder, CitySeeder, DistrictSeeder, VillageSeeder, RegionSeeder), update `DatabaseSeeder` + `.env.example` (`SEED_REGIONS`), `storage/app/regions/.gitkeep` + `.gitignore` entry, (opsional) RegionController + routes, tests.
 
 ---
 

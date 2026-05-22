@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\HealthController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,7 +14,13 @@ Route::prefix('v1')->group(function (): void {
 
         Route::middleware('auth:api')->group(function (): void {
             Route::get('me', [AuthController::class, 'me']);
+            Route::put('me', [AuthController::class, 'updateProfile']);
+            Route::post('change-password', [AuthController::class, 'changePassword']);
             Route::post('logout', [AuthController::class, 'logout']);
         });
+    });
+
+    Route::middleware('auth:api')->group(function (): void {
+        Route::apiResource('categories', CategoryController::class);
     });
 });

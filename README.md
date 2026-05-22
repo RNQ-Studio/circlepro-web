@@ -44,6 +44,7 @@ Tujuannya adalah menyediakan kerangka kerja yang bersih, konsisten, dan siap dik
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arsitektur sistem, layering, struktur direktori, strategi auth, package, best practice Flutter ↔ Laravel |
 | [docs/MODULES.md](docs/MODULES.md) | Daftar modul & fitur starter beserta prioritas (core / nice-to-have) |
 | [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md) | Rencana pembagian sesi kerja (~5 jam/sesi) untuk implementasi bertahap |
+| [docs/DATA_MASTER_PATTERN.md](docs/DATA_MASTER_PATTERN.md) | Pola replikasi CRUD data master baru berdasarkan modul `Category` |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Panduan branch, konvensi commit (Conventional Commits), quality gate, & push |
 
 ---
@@ -51,6 +52,7 @@ Tujuannya adalah menyediakan kerangka kerja yang bersih, konsisten, dan siap dik
 ## Cara Menjalankan
 
 > Prasyarat: **PHP 8.3+**, **Composer 2**, **PostgreSQL 14+**, dan **Node 20+**.
+> Di Windows lokal proyek ini pernah memakai `C:\php8.3.6\php.exe` karena PATH default masih PHP 7.4.
 
 ```bash
 # 1. Install dependency
@@ -61,8 +63,11 @@ npm install
 cp .env.example .env
 php artisan key:generate
 
-# 3. Isi kredensial PostgreSQL di .env (DB_DATABASE, DB_USERNAME, DB_PASSWORD),
-#    buat database-nya, lalu migrasi + seed
+# 3. Isi kredensial PostgreSQL di .env, lalu buat database aplikasi:
+#    DB_CONNECTION=pgsql
+#    DB_DATABASE=laravel_starter
+#    DB_USERNAME=<user>
+#    DB_PASSWORD=<password>
 php artisan migrate --seed
 
 # 4. Build assets & jalankan
@@ -83,12 +88,22 @@ php artisan passport:client --password          # isi PASSPORT_PASSWORD_CLIENT_I
 
 **Endpoint Auth API (Flutter):** `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`. Lihat [docs/ARCHITECTURE.md §5](docs/ARCHITECTURE.md).
 
+**Dokumentasi API:** Scramble menyediakan dokumentasi interaktif di `/docs/api` dan OpenAPI JSON di `/docs/api.json`. Endpoint docs hanya terbuka otomatis di `local`; untuk environment lain gunakan Gate `viewApiDocs`. Tim Flutter/Postman dapat memakai URL OpenAPI JSON tersebut sebagai sumber kontrak API.
+
 **Testing:** test berjalan di database PostgreSQL terpisah `laravel_starter_test` (lihat `phpunit.xml`). Buat database tersebut sekali, lalu:
 
 ```bash
-composer test       # php artisan test
-composer lint       # pint (format)
-composer analyse    # phpstan (Larastan), memory limit 1G
+php artisan test
+vendor/bin/pint
+vendor/bin/phpstan analyse --memory-limit=1G
+```
+
+Jika PATH masih mengarah ke PHP lama di Windows, jalankan quality gate dengan binary PHP 8.3:
+
+```powershell
+C:\php8.3.6\php.exe artisan test
+C:\php8.3.6\php.exe vendor\bin\pint
+C:\php8.3.6\php.exe vendor\bin\phpstan analyse --memory-limit=1G
 ```
 
 
@@ -100,6 +115,10 @@ composer analyse    # phpstan (Larastan), memory limit 1G
 
 ✅ **Sesi 2 selesai** — Auth: Passport (Password Grant) untuk API + login session Filament `/admin`, RBAC (spatie) dengan role `super-admin`/`admin`/`staff` & `super-admin` bypass. Endpoint login/refresh/logout/me.
 
-⏭️ **Berikutnya: Sesi 3** — User & Role management (API + back-office). Lihat [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md).
+✅ **Sesi 3 selesai** — User & Role management: CRUD user/role di Filament, assign role/permission, policy RBAC, endpoint profil API (`PUT /auth/me`, `POST /auth/change-password`), dan test otorisasi.
+
+✅ **Sesi 4 selesai** — Data Master CRUD generik: API + back-office `Category`, filter/sort/pagination, policy RBAC, dokumentasi pola data master, dan test.
+
+🟨 **Sesi 5 berjalan** — Polish: dashboard/branding back-office, dokumentasi cara menjalankan, quality gate, dan nice-to-have terpilih. Lihat [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md).
 
 > Catatan dev lokal: untuk produksi gunakan user PostgreSQL khusus least-privilege (bukan `postgres` superuser).

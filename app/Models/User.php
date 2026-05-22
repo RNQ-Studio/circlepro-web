@@ -49,6 +49,12 @@ class User extends Authenticatable implements FilamentUser, OAuthenticatable
         return $this->hasMany(UserDevice::class);
     }
 
+    /** @return HasMany<Notification, $this> */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *

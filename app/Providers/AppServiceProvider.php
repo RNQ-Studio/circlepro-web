@@ -4,11 +4,15 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Policies\RolePolicy;
+use App\Services\Push\FcmDriver;
+use App\Services\Push\FcmDriverInterface;
+use App\Services\Push\LogFcmDriver;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Kreait\Laravel\Firebase\Facades\Firebase;
 use Laravel\Passport\Passport;
 use Spatie\Permission\Models\Role;
 
@@ -16,7 +20,16 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Use the real FCM driver when Firebase credentials are configured; fall back to log driver.
+        $this->app->singleton(FcmDriverInterface::class, function (): FcmDriverInterface {
+            $credentials = config('firebase.projects.app.credentials');
+
+            if (filled($credentials)) {
+                return new FcmDriver(Firebase::project('app')->messaging());
+            }
+
+            return new LogFcmDriver;
+        });
     }
 
     public function boot(): void

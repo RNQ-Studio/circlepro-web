@@ -276,6 +276,191 @@ Index: `parent_id`, `type`, `code`, `phone_code`, composite `(type, code)`.
 
 ---
 
+## Sesi 7 — Device Tracking (Fondasi Push Notification) 🟨
+
+**Tujuan:** Menyimpan spesifikasi device mobile yang mengakses API — platform, OS, versi app, dan push token — sebagai fondasi untuk push notification, analytics, dan keamanan (deteksi device tak dikenal).
+
+**Dependency:** Sesi 2 selesai (Passport auth berjalan).
+
+**Tugas:**
+1. **Migrasi tabel `user_devices`:**
+   - `id` (ULID/UUID PK), `user_id` (FK → users), `device_id` (varchar — UUID dari sisi mobile, unique per user+device), `platform` (enum: `android` | `ios` | `web`), `os_version`, `app_version`, `device_name`, `push_token` (nullable — FCM/APNs token), `last_active_at` (timestamp nullable), timestamps.
+   - Index: `user_id`, `device_id`, `push_token` (partial, not null).
+2. **Model `UserDevice`** dengan relasi ke `User`:
+   - `user(): BelongsTo`.
+   - Scope: `scopeWithPushToken()` untuk query device yang bisa menerima notif.
+3. **Integrasi ke login flow:**
+   - Tambahkan field opsional ke `LoginRequest`: `device_id`, `platform`, `os_version`, `app_version`, `device_name`, `push_token`.
+   - `AuthService::login()` melakukan `upsert` ke `user_devices` berdasarkan `user_id + device_id` setelah token dibuat.
+4. **Integrasi ke logout:**
+   - Saat logout, set `push_token = null` pada device yang bersangkutan agar tidak menerima notif saat tidak login.
+5. **Middleware `UpdateDeviceActivity`** (opsional, ringan):
+   - Update `last_active_at` pada device aktif setiap N menit (pakai cache untuk throttle update-nya, hindari write per-request).
+6. **Back-office — Device list** di Filament (read-only, di bawah user detail):
+   - Tampilkan device list per user: platform, versi app, last active, push token status.
+7. **Tests:** feature test login dengan dan tanpa device info; upsert saat login ulang dari device sama; push_token di-nullify saat logout.
+
+**Output / Deliverable:**
+- [ ] Tabel `user_devices` ter-migrasi.
+- [ ] Login dari mobile dapat menyertakan device info dan tersimpan.
+- [ ] Logout menghapus push token di device terkait.
+- [ ] `UserDevice::scopeWithPushToken()` bisa langsung dipakai sesi push notification.
+- [ ] Tests hijau.
+- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+**File dibuat/diubah:** migrasi `user_devices`, `app/Models/UserDevice.php`, update `User.php` (relasi `devices()`), update `LoginRequest`, update `AuthService`, (opsional) `UpdateDeviceActivity` middleware, Filament user detail panel, tests.
+
+---
+
+## Sesi 8 — Force Update & App Config 🟨
+
+**Tujuan:** Dua mekanisme penting untuk kontrol app mobile dari server: paksa update versi lama, dan distribusi konfigurasi dinamis (maintenance mode, feature flags, link T&C, dll.) tanpa release app baru.
+
+**Dependency:** Sesi 2 selesai (auth berjalan); Sesi 7 dianjurkan (tersedia `app_version` di device).
+
+**Tugas:**
+1. **Force Update — tabel `app_versions`:**
+   - `id`, `platform` (enum: `android` | `ios`), `min_version` (varchar — versi minimum yang masih diizinkan, e.g. `2.1.0`), `latest_version` (varchar), `force_update` (boolean), `store_url` (varchar), `release_notes` (text nullable), timestamps.
+   - Seed data awal untuk android & ios.
+2. **Model `AppVersion`** + Filament resource (CRUD oleh admin).
+3. **Endpoint Force Update:**
+   - `GET /api/v1/app/version?platform=android` → `{ min_version, latest_version, force_update, store_url, release_notes }`.
+   - Endpoint `@unauthenticated` (mobile cek ini sebelum login).
+   - Rate limit longgar (tidak butuh per-user throttle ketat).
+4. **App Config — tabel `app_configs`:**
+   - `id`, `key` (varchar unique), `value` (text), `type` (enum: `string` | `boolean` | `integer` | `json`), `description` (text nullable), timestamps.
+   - Seed default keys: `maintenance_mode` (boolean), `maintenance_message` (string), `tos_url`, `privacy_url`, `support_email`.
+5. **Model `AppConfig`** dengan helper cast otomatis berdasarkan `type` + cache (cache busted saat update):
+   - `AppConfig::get(key, default)` — static helper.
+6. **Endpoint App Config:**
+   - `GET /api/v1/app/config` → semua key publik sebagai flat object `{ key: value, ... }`.
+   - `@unauthenticated`.
+7. **Middleware `CheckMaintenance`:** jika `maintenance_mode = true`, semua endpoint API (kecuali config & version) kembalikan 503 dengan pesan dari `maintenance_message`.
+8. **Filament resource** untuk CRUD `AppVersion` dan `AppConfig` (admin dapat update tanpa deploy).
+9. **Tests:** force update response per platform; app config cast tipe; 503 saat maintenance mode aktif.
+
+**Output / Deliverable:**
+- [ ] Mobile dapat cek versi minimum sebelum login.
+- [ ] Admin dapat set force update dari back-office tanpa deploy.
+- [ ] Config dinamis dapat di-fetch mobile saat startup.
+- [ ] Maintenance mode bekerja via middleware.
+- [ ] Tests hijau.
+- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+**File dibuat/diubah:** migrasi `app_versions` & `app_configs`, `AppVersion.php`, `AppConfig.php`, Filament resources, `app/Http/Controllers/Api/V1/AppController.php`, `app/Http/Middleware/CheckMaintenance.php`, update `bootstrap/app.php`, routes, tests.
+
+---
+
+## Sesi 9 — File Upload & Media Management 🟨
+
+**Tujuan:** Pola upload file yang aman dan konsisten — avatar user, serta template yang dapat direplikasi untuk entitas lain — dengan dukungan storage lokal (dev) dan S3-compatible (prod).
+
+**Dependency:** Sesi 2 selesai (auth); ikuti pola data master dari Sesi 4.
+
+**Tugas:**
+1. **Konfigurasi Storage:**
+   - Setup disk `public` (lokal dev) dan disk `s3` (prod) di `config/filesystems.php`.
+   - Tambahkan `.env.example` keys: `FILESYSTEM_DISK`, `AWS_*` / `DO_SPACES_*`.
+   - Jalankan `php artisan storage:link` untuk disk lokal.
+2. **Avatar upload untuk User:**
+   - Tambahkan kolom `avatar` (varchar nullable) ke tabel `users` via migrasi baru.
+   - Endpoint `POST /api/v1/auth/avatar` (multipart/form-data, field `avatar`).
+   - Validasi: max 2MB, mime: jpeg/png/webp.
+   - Simpan ke `avatars/{userId}/` dengan nama unik; hapus file lama saat update.
+   - Kembalikan URL publik di `UserResource`.
+3. **Helper `FileUploadService`** (reusable):
+   - `upload(UploadedFile, folder, disk): string` → simpan dan kembalikan path.
+   - `delete(path, disk): void`.
+   - Gunakan disk dari config secara default; mudah di-mock di test.
+4. **Filament — avatar di User resource:** field upload/preview di form edit user.
+5. **Pola untuk entitas lain:** dokumentasikan di [DATA_MASTER_PATTERN.md](DATA_MASTER_PATTERN.md) cara menambah kolom file ke model lain menggunakan `FileUploadService`.
+6. **Tests:** upload avatar (valid & invalid mime/size); avatar lama terhapus saat update; URL muncul di response `me`.
+
+**Output / Deliverable:**
+- [ ] Endpoint avatar upload berfungsi, disimpan ke storage, URL dikembalikan.
+- [ ] Pindah disk cukup ubah env `FILESYSTEM_DISK`.
+- [ ] `FileUploadService` siap dipakai modul lain.
+- [ ] Tests hijau.
+- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+**File dibuat/diubah:** migrasi add `avatar` ke `users`, `app/Services/FileUploadService.php`, update `AuthController` (endpoint avatar), `AvatarRequest`, update `UserResource`, update Filament User resource, update `.env.example`, update `DATA_MASTER_PATTERN.md`, tests.
+
+---
+
+## Sesi 10 — Push Notification (FCM) & Notification History 🟨
+
+**Tujuan:** Infrastruktur pengiriman push notification ke device mobile via FCM, plus riwayat notifikasi yang bisa ditampilkan di app (notification center/inbox).
+
+**Dependency:** Sesi 7 selesai (`user_devices` + `push_token` tersedia).
+
+**Tugas:**
+1. **FCM Setup:**
+   - Install package FCM (mis. `kreait/laravel-firebase` atau `laravel-notification-channels/fcm`). ⚠️ Pilih berdasarkan kompatibilitas Laravel 13.
+   - Konfigurasi credential: service account JSON path / project ID di `.env.example`.
+2. **Tabel `notifications` (riwayat):**
+   - `id` (ULID), `user_id` (FK), `title`, `body`, `data` (jsonb nullable — payload untuk deep link), `type` (varchar — kategori notif, e.g. `promo`, `system`, `order`), `read_at` (timestamp nullable), `sent_at` (timestamp nullable), `failed_at` (timestamp nullable).
+   - Index: `user_id`, `read_at`, `type`.
+3. **Model `Notification`** (custom, bukan Laravel built-in Notification tabel):
+   - Scope: `scopeUnread()`, `scopeByType()`.
+4. **`PushNotificationService`:**
+   - `send(User|Collection $users, string $title, string $body, array $data = []): void`
+   - Ambil push token aktif dari `user_devices` (via `scopeWithPushToken()`).
+   - Kirim via FCM; log hasil; update `sent_at` atau `failed_at` di record `notifications`.
+   - Jika token invalid (FCM error `UNREGISTERED`), nullify token di `user_devices`.
+5. **Endpoint Notification API:**
+   - `GET /api/v1/notifications` (list + pagination, unread first).
+   - `POST /api/v1/notifications/{id}/read` (tandai baca).
+   - `POST /api/v1/notifications/read-all`.
+   - `GET /api/v1/notifications/unread-count` (badge counter).
+6. **Filament — kirim notifikasi manual** (form sederhana: pilih user/semua, isi title/body, kirim via `PushNotificationService`).
+7. **Tests:** kirim notif ke user; token invalid di-nullify; endpoint mark-read; unread count akurat. Mock FCM di tests.
+
+**Output / Deliverable:**
+- [ ] Push notification dapat dikirim ke satu atau banyak user.
+- [ ] Token invalid otomatis dibersihkan.
+- [ ] App dapat fetch riwayat notifikasi dan menampilkan badge count.
+- [ ] Admin dapat kirim notifikasi manual dari back-office.
+- [ ] Tests hijau (dengan FCM di-mock).
+- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+**File dibuat/diubah:** migrasi `notifications`, `app/Models/Notification.php`, `app/Services/PushNotificationService.php`, `app/Http/Controllers/Api/V1/NotificationController.php`, routes, Filament page "Send Notification", update `.env.example`, tests.
+
+---
+
+## Sesi 11 — OTP & Verifikasi Nomor HP 🟨
+
+**Tujuan:** Autentikasi / verifikasi berbasis nomor telepon — umum di app mobile Indonesia — dengan flow OTP (6 digit, TTL pendek, rate-limited).
+
+**Dependency:** Sesi 2 selesai (auth); Sesi 10 dianjurkan (bisa kirim OTP via notif, bukan hanya SMS).
+
+**Tugas:**
+1. **Tambah kolom `phone`** ke tabel `users` (varchar nullable, unique) via migrasi baru.
+2. **Tabel `otp_codes`:**
+   - `id`, `phone` (varchar), `code` (varchar 6 digit, hashed), `purpose` (enum: `login` | `register` | `verify_phone` | `reset_password`), `expires_at` (timestamp), `used_at` (timestamp nullable), `ip_address` (varchar nullable), timestamps.
+   - Index: `phone`, `expires_at`.
+3. **`OtpService`:**
+   - `generate(phone, purpose): OtpCode` — generate kode 6 digit, hash & simpan, TTL 5 menit, bersihkan kode lama.
+   - `verify(phone, code, purpose): bool` — bandingkan hash, cek TTL, tandai `used_at`. Tolak kode yang sudah dipakai.
+   - Rate limit built-in: max 3 request OTP per nomor per 10 menit (via cache counter).
+4. **SMS Provider:** gunakan facade/interface agar provider bisa diganti. ⚠️ Pilih antara Twilio, Vonage, atau provider lokal (Zenziva, Nusasms). Sesi ini buat abstraksi + implementasi dummy (log ke `laravel.log`) yang bisa diganti provider nyata.
+5. **Endpoint OTP API:**
+   - `POST /api/v1/auth/otp/send` — kirim OTP ke `phone` (`@unauthenticated`; throttle ketat).
+   - `POST /api/v1/auth/otp/verify` — verifikasi kode; jika purpose `login`, kembalikan token Passport; jika `verify_phone`, update `phone_verified_at` user.
+   - `POST /api/v1/auth/phone` (authenticated) — update nomor HP sendiri + trigger OTP verifikasi.
+6. **Kolom tambahan `phone_verified_at`** (timestamp nullable) di `users`.
+7. **Tests:** generate OTP; expired OTP ditolak; kode yang sudah dipakai ditolak; rate limit bekerja; login via OTP mengembalikan token.
+
+**Output / Deliverable:**
+- [ ] User dapat login atau verifikasi HP via OTP.
+- [ ] Rate limit mencegah brute force.
+- [ ] Provider SMS dapat diganti tanpa ubah logika OTP.
+- [ ] Tests hijau.
+- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+**File dibuat/diubah:** migrasi add `phone` + `phone_verified_at` ke `users`, migrasi `otp_codes`, `app/Models/OtpCode.php`, `app/Services/OtpService.php`, `app/Services/Sms/SmsInterface.php`, `app/Services/Sms/LogSmsProvider.php`, `app/Http/Controllers/Api/V1/OtpController.php`, routes, update `.env.example`, tests.
+
+---
+
 ## Catatan Lintas-Sesi
 
 - **Patuhi [CONTRIBUTING.md](../CONTRIBUTING.md)** untuk konvensi branch, commit, dan push.

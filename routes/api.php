@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AppController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -30,5 +31,12 @@ Route::prefix('v1')->group(function (): void {
 
     Route::middleware(['auth:api', 'check.maintenance'])->group(function (): void {
         Route::apiResource('categories', CategoryController::class);
+
+        Route::prefix('notifications')->group(function (): void {
+            Route::get('/', [NotificationController::class, 'index']);
+            Route::get('unread-count', [NotificationController::class, 'unreadCount']);
+            Route::post('read-all', [NotificationController::class, 'markAllRead']);
+            Route::post('{notification}/read', [NotificationController::class, 'markRead']);
+        });
     });
 });

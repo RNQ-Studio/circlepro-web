@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CheckMaintenance;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Support\ApiResponse;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -24,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
             ForceJsonResponse::class,
+        ]);
+        $middleware->alias([
+            'check.maintenance' => CheckMaintenance::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

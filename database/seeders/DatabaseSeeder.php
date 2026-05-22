@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             AdminUserSeeder::class,
             CategorySeeder::class,
+            AppConfigSeeder::class,
         ]);
 
         // Region data (~245k records) is opt-in to avoid slow default seeds.

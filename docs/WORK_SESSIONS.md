@@ -276,7 +276,7 @@ Index: `parent_id`, `type`, `code`, `phone_code`, composite `(type, code)`.
 
 ---
 
-## Sesi 7 — Device Tracking (Fondasi Push Notification) 🟨
+## Sesi 7 — Device Tracking (Fondasi Push Notification) 🟩
 
 **Tujuan:** Menyimpan spesifikasi device mobile yang mengakses API — platform, OS, versi app, dan push token — sebagai fondasi untuk push notification, analytics, dan keamanan (deteksi device tak dikenal).
 
@@ -300,19 +300,19 @@ Index: `parent_id`, `type`, `code`, `phone_code`, composite `(type, code)`.
    - Tampilkan device list per user: platform, versi app, last active, push token status.
 7. **Tests:** feature test login dengan dan tanpa device info; upsert saat login ulang dari device sama; push_token di-nullify saat logout.
 
-**Output / Deliverable:**
-- [ ] Tabel `user_devices` ter-migrasi.
-- [ ] Login dari mobile dapat menyertakan device info dan tersimpan.
-- [ ] Logout menghapus push token di device terkait.
-- [ ] `UserDevice::scopeWithPushToken()` bisa langsung dipakai sesi push notification.
-- [ ] Tests hijau.
-- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Output / Deliverable:** ✅ **SELESAI** (2026-05-23)
+- [x] Tabel `user_devices` ter-migrasi.
+- [x] Login dari mobile dapat menyertakan device info dan tersimpan.
+- [x] Logout menghapus push token di device terkait.
+- [x] `UserDevice::scopeWithPushToken()` bisa langsung dipakai sesi push notification.
+- [x] Tests hijau (7 tests).
+- [x] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**File dibuat/diubah:** migrasi `user_devices`, `app/Models/UserDevice.php`, update `User.php` (relasi `devices()`), update `LoginRequest`, update `AuthService`, (opsional) `UpdateDeviceActivity` middleware, Filament user detail panel, tests.
+**File dibuat/diubah:** migrasi `user_devices`, `app/Models/UserDevice.php`, `app/Support/Enums/DevicePlatform.php`, update `User.php` (relasi `devices()`), update `LoginRequest`, update `AuthService`, `UserDevicesRelationManager` (Filament), tests.
 
 ---
 
-## Sesi 8 — Force Update & App Config 🟨
+## Sesi 8 — Force Update & App Config 🟩
 
 **Tujuan:** Dua mekanisme penting untuk kontrol app mobile dari server: paksa update versi lama, dan distribusi konfigurasi dinamis (maintenance mode, feature flags, link T&C, dll.) tanpa release app baru.
 
@@ -339,19 +339,19 @@ Index: `parent_id`, `type`, `code`, `phone_code`, composite `(type, code)`.
 8. **Filament resource** untuk CRUD `AppVersion` dan `AppConfig` (admin dapat update tanpa deploy).
 9. **Tests:** force update response per platform; app config cast tipe; 503 saat maintenance mode aktif.
 
-**Output / Deliverable:**
-- [ ] Mobile dapat cek versi minimum sebelum login.
-- [ ] Admin dapat set force update dari back-office tanpa deploy.
-- [ ] Config dinamis dapat di-fetch mobile saat startup.
-- [ ] Maintenance mode bekerja via middleware.
-- [ ] Tests hijau.
-- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Output / Deliverable:** ✅ **SELESAI** (2026-05-23)
+- [x] Mobile dapat cek versi minimum sebelum login.
+- [x] Admin dapat set force update dari back-office tanpa deploy.
+- [x] Config dinamis dapat di-fetch mobile saat startup.
+- [x] Maintenance mode bekerja via middleware.
+- [x] Tests hijau (13 tests).
+- [x] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**File dibuat/diubah:** migrasi `app_versions` & `app_configs`, `AppVersion.php`, `AppConfig.php`, Filament resources, `app/Http/Controllers/Api/V1/AppController.php`, `app/Http/Middleware/CheckMaintenance.php`, update `bootstrap/app.php`, routes, tests.
+**File dibuat/diubah:** migrasi `app_versions` & `app_configs`, `AppVersion.php`, `AppConfig.php`, `AppConfigType` enum, `AppConfigSeeder`, Filament resources (AppVersions, AppConfigs), `AppController`, `CheckMaintenance`, update `bootstrap/app.php` + routes, tests.
 
 ---
 
-## Sesi 9 — File Upload & Media Management 🟨
+## Sesi 9 — File Upload & Media Management 🟩
 
 **Tujuan:** Pola upload file yang aman dan konsisten — avatar user, serta template yang dapat direplikasi untuk entitas lain — dengan dukungan storage lokal (dev) dan S3-compatible (prod).
 
@@ -376,18 +376,18 @@ Index: `parent_id`, `type`, `code`, `phone_code`, composite `(type, code)`.
 5. **Pola untuk entitas lain:** dokumentasikan di [DATA_MASTER_PATTERN.md](DATA_MASTER_PATTERN.md) cara menambah kolom file ke model lain menggunakan `FileUploadService`.
 6. **Tests:** upload avatar (valid & invalid mime/size); avatar lama terhapus saat update; URL muncul di response `me`.
 
-**Output / Deliverable:**
-- [ ] Endpoint avatar upload berfungsi, disimpan ke storage, URL dikembalikan.
-- [ ] Pindah disk cukup ubah env `FILESYSTEM_DISK`.
-- [ ] `FileUploadService` siap dipakai modul lain.
-- [ ] Tests hijau.
-- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Output / Deliverable:** ✅ **SELESAI** (2026-05-23)
+- [x] Endpoint avatar upload berfungsi, disimpan ke storage, URL dikembalikan.
+- [x] Pindah disk cukup ubah env `FILESYSTEM_DISK`.
+- [x] `FileUploadService` siap dipakai modul lain.
+- [x] Tests hijau (7 tests).
+- [x] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**File dibuat/diubah:** migrasi add `avatar` ke `users`, `app/Services/FileUploadService.php`, update `AuthController` (endpoint avatar), `AvatarRequest`, update `UserResource`, update Filament User resource, update `.env.example`, update `DATA_MASTER_PATTERN.md`, tests.
+**File dibuat/diubah:** migrasi add `avatar` ke `users`, `app/Services/FileUploadService.php`, update `AuthController` (endpoint avatar), `AvatarRequest`, update `UserResource` (avatar_url), update Filament User form (FileUpload), update `.env.example`, tests.
 
 ---
 
-## Sesi 10 — Push Notification (FCM) & Notification History 🟨
+## Sesi 10 — Push Notification (FCM) & Notification History 🟩
 
 **Tujuan:** Infrastruktur pengiriman push notification ke device mobile via FCM, plus riwayat notifikasi yang bisa ditampilkan di app (notification center/inbox).
 
@@ -415,19 +415,19 @@ Index: `parent_id`, `type`, `code`, `phone_code`, composite `(type, code)`.
 6. **Filament — kirim notifikasi manual** (form sederhana: pilih user/semua, isi title/body, kirim via `PushNotificationService`).
 7. **Tests:** kirim notif ke user; token invalid di-nullify; endpoint mark-read; unread count akurat. Mock FCM di tests.
 
-**Output / Deliverable:**
-- [ ] Push notification dapat dikirim ke satu atau banyak user.
-- [ ] Token invalid otomatis dibersihkan.
-- [ ] App dapat fetch riwayat notifikasi dan menampilkan badge count.
-- [ ] Admin dapat kirim notifikasi manual dari back-office.
-- [ ] Tests hijau (dengan FCM di-mock).
-- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Output / Deliverable:** ✅ **SELESAI** (2026-05-23)
+- [x] Push notification dapat dikirim ke satu atau banyak user.
+- [x] Token invalid otomatis dibersihkan.
+- [x] App dapat fetch riwayat notifikasi dan menampilkan badge count.
+- [x] Admin dapat kirim notifikasi manual dari back-office.
+- [x] Tests hijau (9 tests, FCM di-mock via Mockery).
+- [x] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**File dibuat/diubah:** migrasi `notifications`, `app/Models/Notification.php`, `app/Services/PushNotificationService.php`, `app/Http/Controllers/Api/V1/NotificationController.php`, routes, Filament page "Send Notification", update `.env.example`, tests.
+**File dibuat/diubah:** `kreait/laravel-firebase` v7, migrasi `notifications`, `Notification.php`, `FcmDriverInterface/FcmDriver/LogFcmDriver`, `PushNotificationService`, `NotificationController`, `SendNotificationPage` (Filament), `config/firebase.php`, update `.env.example`, tests.
 
 ---
 
-## Sesi 11 — OTP & Verifikasi Nomor HP 🟨
+## Sesi 11 — OTP & Verifikasi Nomor HP 🟩
 
 **Tujuan:** Autentikasi / verifikasi berbasis nomor telepon — umum di app mobile Indonesia — dengan flow OTP (6 digit, TTL pendek, rate-limited).
 
@@ -450,12 +450,12 @@ Index: `parent_id`, `type`, `code`, `phone_code`, composite `(type, code)`.
 6. **Kolom tambahan `phone_verified_at`** (timestamp nullable) di `users`.
 7. **Tests:** generate OTP; expired OTP ditolak; kode yang sudah dipakai ditolak; rate limit bekerja; login via OTP mengembalikan token.
 
-**Output / Deliverable:**
-- [ ] User dapat login atau verifikasi HP via OTP.
-- [ ] Rate limit mencegah brute force.
-- [ ] Provider SMS dapat diganti tanpa ubah logika OTP.
-- [ ] Tests hijau.
-- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Output / Deliverable:** ✅ **SELESAI** (2026-05-23)
+- [x] User dapat login atau verifikasi HP via OTP.
+- [x] Rate limit mencegah brute force (3 req / 10 menit via Cache).
+- [x] Provider SMS dapat diganti tanpa ubah logika OTP (SmsInterface).
+- [x] Tests hijau (12 tests).
+- [x] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 **File dibuat/diubah:** migrasi add `phone` + `phone_verified_at` ke `users`, migrasi `otp_codes`, `app/Models/OtpCode.php`, `app/Services/OtpService.php`, `app/Services/Sms/SmsInterface.php`, `app/Services/Sms/LogSmsProvider.php`, `app/Http/Controllers/Api/V1/OtpController.php`, routes, update `.env.example`, tests.
 

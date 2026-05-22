@@ -7,6 +7,8 @@ use App\Policies\RolePolicy;
 use App\Services\Push\FcmDriver;
 use App\Services\Push\FcmDriverInterface;
 use App\Services\Push\LogFcmDriver;
+use App\Services\Sms\LogSmsProvider;
+use App\Services\Sms\SmsInterface;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
@@ -20,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // SMS: swap LogSmsProvider for a real provider (Twilio, Vonage, etc.) in production.
+        $this->app->singleton(SmsInterface::class, LogSmsProvider::class);
+
         // Use the real FCM driver when Firebase credentials are configured; fall back to log driver.
         $this->app->singleton(FcmDriverInterface::class, function (): FcmDriverInterface {
             $credentials = config('firebase.projects.app.credentials');

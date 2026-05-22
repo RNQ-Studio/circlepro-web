@@ -41,6 +41,25 @@ class AuthService
     }
 
     /**
+     * Issue a Personal Access Token for a user after OTP verification.
+     * Unlike the Password Grant, this does not produce a refresh token.
+     *
+     * @return array{access_token: string, refresh_token: null, token_type: string, expires_in: int}
+     */
+    public function issueTokenForUser(User $user): array
+    {
+        $result = $user->createToken('otp-login');
+        $expiresAt = $result->token->expires_at ?? now()->addHours(8);
+
+        return [
+            'access_token' => $result->accessToken,
+            'refresh_token' => null,
+            'token_type' => 'Bearer',
+            'expires_in' => (int) now()->diffInSeconds($expiresAt),
+        ];
+    }
+
+    /**
      * @return array{access_token: string, refresh_token: string, token_type: string, expires_in: int}
      *
      * @throws AuthenticationException

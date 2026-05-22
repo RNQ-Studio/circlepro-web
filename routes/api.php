@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\OtpController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -14,6 +15,12 @@ Route::prefix('v1')->group(function (): void {
     Route::prefix('app')->group(function (): void {
         Route::get('version', [AppController::class, 'version'])->middleware('throttle:60,1');
         Route::get('config', [AppController::class, 'config'])->middleware('throttle:60,1');
+    });
+
+    // OTP endpoints (unauthenticated, heavily throttled)
+    Route::prefix('auth/otp')->middleware(['throttle:10,1', 'check.maintenance'])->group(function (): void {
+        Route::post('send', [OtpController::class, 'send']);
+        Route::post('verify', [OtpController::class, 'verify']);
     });
 
     Route::prefix('auth')->group(function (): void {
@@ -26,6 +33,8 @@ Route::prefix('v1')->group(function (): void {
             Route::post('avatar', [AuthController::class, 'uploadAvatar']);
             Route::post('change-password', [AuthController::class, 'changePassword']);
             Route::post('logout', [AuthController::class, 'logout']);
+            Route::post('phone', [OtpController::class, 'updatePhone']);
+            Route::post('phone/verify', [OtpController::class, 'verifyPhone']);
         });
     });
 

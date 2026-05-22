@@ -20,13 +20,15 @@ use Spatie\Permission\Traits\HasRoles;
 /**
  * @property string $name
  * @property string $email
+ * @property string|null $phone
  * @property string|null $avatar
  * @property bool $is_active
  * @property Carbon|null $email_verified_at
+ * @property Carbon|null $phone_verified_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'is_active', 'avatar'])]
+#[Fillable(['name', 'email', 'password', 'is_active', 'avatar', 'phone', 'phone_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, OAuthenticatable
 {
@@ -64,6 +66,7 @@ class User extends Authenticatable implements FilamentUser, OAuthenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];

@@ -100,6 +100,8 @@ composer analyse    # phpstan (Larastan), memory limit 1G
 
 ✅ **Sesi 2 selesai** — Auth: Passport (Password Grant) untuk API + login session Filament `/admin`, RBAC (spatie) dengan role `super-admin`/`admin`/`staff` & `super-admin` bypass. Endpoint login/refresh/logout/me.
 
-⏭️ **Berikutnya: Sesi 3** — User & Role management (API + back-office). Lihat [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md).
+✅ **Sesi 3 selesai** — User & Role management: CRUD user/role di Filament, assign role/permission, policy RBAC, endpoint profil API (`PUT /auth/me`, `POST /auth/change-password`), dan test otorisasi.
+
+⏭️ **Berikutnya: Sesi 4** — Data Master CRUD generik (API + back-office) dengan contoh `Category`. Lihat [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md).
 
 > Catatan dev lokal: untuk produksi gunakan user PostgreSQL khusus least-privilege (bukan `postgres` superuser).

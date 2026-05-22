@@ -13,6 +13,8 @@ Route::prefix('v1')->group(function (): void {
 
         Route::middleware('auth:api')->group(function (): void {
             Route::get('me', [AuthController::class, 'me']);
+            Route::put('me', [AuthController::class, 'updateProfile']);
+            Route::post('change-password', [AuthController::class, 'changePassword']);
             Route::post('logout', [AuthController::class, 'logout']);
         });
     });

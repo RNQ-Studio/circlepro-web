@@ -113,14 +113,16 @@ Rencana pembagian sesi kerja untuk implementasi Laravel Starter via Claude Code.
 4. **Authorization enforcement:** Policy untuk `User`/`Role` dipakai baik di API maupun Filament.
 5. **Tests:** feature test CRUD user/role (back-office) + profil API + pengecekan permission (403 untuk yang tak berhak).
 
-**Output / Deliverable:**
-- [ ] Admin mengelola user & role sepenuhnya dari `/admin`.
-- [ ] Assign role/permission berfungsi & langsung berdampak ke authorization.
-- [ ] Endpoint profil API berfungsi; user lain tak bisa mengubah profil orang lain.
-- [ ] Tests hijau.
-- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Output / Deliverable:** ✅ **SELESAI** (2026-05-22)
+- [x] Admin mengelola user & role sepenuhnya dari `/admin`.
+- [x] Assign role/permission berfungsi & langsung berdampak ke authorization.
+- [x] Endpoint profil API berfungsi; user lain tak bisa mengubah profil orang lain.
+- [x] Tests hijau (26 tests total).
+- [x] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**File dibuat/diubah:** `app/Filament/Resources/UserResource.php`, `RoleResource.php`, `app/Policies/UserPolicy.php`, `RolePolicy.php`, `app/Http/Resources/Api/V1/UserResource.php`, update `AuthController`, Form Requests terkait, tests.
+**File dibuat/diubah:** `app/Filament/Resources/Users/*`, `app/Filament/Resources/Roles/*`, `app/Policies/UserPolicy.php`, `RolePolicy.php`, `app/Http/Resources/Api/V1/UserResource.php`, update `AuthController`, `UpdateProfileRequest`, `ChangePasswordRequest`, `routes/api.php`, tests (`ProfileTest`, `UserRoleManagementTest`).
+
+> **Catatan implementasi:** User/Role dikelola lewat Filament resource yang memakai policy RBAC. Endpoint profil ditambah di bawah `auth:api`: `PUT /api/v1/auth/me` dan `POST /api/v1/auth/change-password`. Password user tetap di-hash oleh cast model `User`.
 
 ---
 

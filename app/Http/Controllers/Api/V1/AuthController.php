@@ -28,6 +28,7 @@ class AuthController extends Controller
         $tokens = $this->authService->login(
             $request->string('email')->toString(),
             $request->string('password')->toString(),
+            $request->only(['device_id', 'platform', 'os_version', 'app_version', 'device_name', 'push_token']),
         );
 
         return ApiResponse::success($tokens, 'Login successful');
@@ -85,7 +86,8 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $this->authService->logout($user);
+        $deviceId = $request->string('device_id')->toString() ?: null;
+        $this->authService->logout($user, $deviceId);
 
         return ApiResponse::success(null, 'Logged out');
     }

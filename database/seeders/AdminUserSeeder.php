@@ -10,9 +10,7 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Placeholder admin. Role assignment (super-admin) is wired in Session 2
-        // once RolePermissionSeeder defines roles. See docs/WORK_SESSIONS.md.
-        User::query()->firstOrCreate(
+        $admin = User::query()->firstOrCreate(
             ['email' => 'admin@example.com'],
             [
                 'name' => 'Administrator',
@@ -21,5 +19,7 @@ class AdminUserSeeder extends Seeder
                 'is_active' => true,
             ],
         );
+
+        $admin->syncRoles(['super-admin']);
     }
 }

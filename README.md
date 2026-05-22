@@ -16,9 +16,9 @@ Tujuannya adalah menyediakan kerangka kerja yang bersih, konsisten, dan siap dik
 | Framework | Laravel | `13.x` (terpasang `13.11`) |
 | Bahasa | PHP | `8.3+` (8.4 didukung) |
 | Database | PostgreSQL | `16` atau `17` |
-| API Auth | Laravel Passport | `12.x` (OAuth2 server) |
-| Back-office UI | Filament | `3.x` (verifikasi `4.x` jika sudah stable ⚠️) |
-| RBAC | spatie/laravel-permission | `6.x` |
+| API Auth | Laravel Passport | `13.x` (OAuth2, Password Grant) |
+| Back-office UI | Filament | `5.x` |
+| RBAC | spatie/laravel-permission | `7.x` |
 | Cache / Queue (opsional) | Redis | `7.x` |
 | PHP runtime lokal | Laravel Herd / Sail / Valet | sesuai OS |
 
@@ -72,7 +72,16 @@ php artisan serve
 
 Cek koneksi: buka `GET /api/v1/health` → harus mengembalikan envelope JSON `{ "success": true, ... }`.
 
-**Akun admin default (seeder):** `admin@example.com` / `password` — *placeholder; role `super-admin` di-assign pada Sesi 2.*
+**Akun admin default (seeder):** `admin@example.com` / `password` (role `super-admin`). Login back-office di `/admin`.
+
+**Setup Passport (sekali, atau di clone/CI baru):**
+
+```bash
+php artisan passport:keys                       # generate storage/oauth-*.key (gitignored)
+php artisan passport:client --password          # isi PASSPORT_PASSWORD_CLIENT_ID/SECRET di .env
+```
+
+**Endpoint Auth API (Flutter):** `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`. Lihat [docs/ARCHITECTURE.md §5](docs/ARCHITECTURE.md).
 
 **Testing:** test berjalan di database PostgreSQL terpisah `laravel_starter_test` (lihat `phpunit.xml`). Buat database tersebut sekali, lalu:
 
@@ -82,14 +91,15 @@ composer lint       # pint (format)
 composer analyse    # phpstan (Larastan), memory limit 1G
 ```
 
-> **Belum tersedia (sesi berikutnya):** Passport (Sesi 2) & Filament back-office `/admin` (Sesi 2). Bagian ini diperbarui saat fitur tersebut masuk.
 
 ---
 
 ## Status Proyek
 
-✅ **Sesi 1 selesai** — fondasi proyek: Laravel 13 + PostgreSQL, struktur direktori, API Response standard, tooling (Pint/Larastan), migrasi awal (users, permission, categories), seeder, dan endpoint `GET /api/v1/health`.
+✅ **Sesi 1 selesai** — fondasi: Laravel 13 + PostgreSQL, struktur direktori, API Response standard, tooling (Pint/Larastan), migrasi awal, seeder, endpoint `GET /api/v1/health`.
 
-⏭️ **Berikutnya: Sesi 2** — Auth (Passport API + session Filament) & RBAC. Lihat [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md).
+✅ **Sesi 2 selesai** — Auth: Passport (Password Grant) untuk API + login session Filament `/admin`, RBAC (spatie) dengan role `super-admin`/`admin`/`staff` & `super-admin` bypass. Endpoint login/refresh/logout/me.
+
+⏭️ **Berikutnya: Sesi 3** — User & Role management (API + back-office). Lihat [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md).
 
 > Catatan dev lokal: untuk produksi gunakan user PostgreSQL khusus least-privilege (bukan `postgres` superuser).

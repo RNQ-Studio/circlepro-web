@@ -77,15 +77,17 @@ Rencana pembagian sesi kerja untuk implementasi Laravel Starter via Claude Code.
    - Update `AdminUserSeeder` agar admin dapat role `super-admin`.
 5. **Tests:** feature test untuk login/refresh/logout/me + test akses panel (boleh vs tidak boleh).
 
-**Output / Deliverable:**
-- [ ] Flutter dapat login → menerima token → akses endpoint terproteksi → refresh → logout.
-- [ ] Login back-office di `/admin` berfungsi; hanya role berhak yang bisa masuk.
-- [ ] Role & permission default ter-seed; `super-admin` bypass berfungsi.
-- [ ] Keputusan grant flow & multi-guard terdokumentasi (di README/ARCHITECTURE).
-- [ ] Tests auth hijau.
-- [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Output / Deliverable:** ✅ **SELESAI** (2026-05-22)
+- [x] Flutter dapat login → menerima token → akses endpoint terproteksi → refresh → logout (diverifikasi via HTTP & feature test).
+- [x] Login back-office di `/admin` berfungsi (`/admin`→302→`/admin/login` 200); hanya role berhak (`PANEL_ROLES`) + user aktif yang bisa masuk.
+- [x] Role & permission default ter-seed; `super-admin` bypass via `Gate::before` berfungsi.
+- [x] Keputusan grant flow (Password Grant, proxy) & multi-guard (`web`) terdokumentasi di [ARCHITECTURE.md §5](ARCHITECTURE.md).
+- [x] Tests auth hijau (16 tests total: AuthTest + PanelAccessTest).
+- [x] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**File dibuat/diubah:** `config/auth.php`, `AuthController`, `LoginRequest`/`RefreshRequest`, `app/Services/Auth/AuthService.php`, `app/Providers/Filament/AdminPanelProvider.php`, `app/Models/User.php`, `RolePermissionSeeder`, `AdminUserSeeder`, `routes/api.php`, tests.
+**File dibuat/diubah:** `config/auth.php` (guard `api`), `config/passport.php` (+`password_client`), `app/Providers/AppServiceProvider.php` (enablePasswordGrant + token lifetimes + Gate::before), `app/Http/Controllers/Api/V1/AuthController.php`, `LoginRequest`/`RefreshTokenRequest`, `app/Services/Auth/AuthService.php`, `app/Http/Resources/Api/V1/UserResource.php`, `app/Providers/Filament/AdminPanelProvider.php`, `app/Models/User.php` (HasApiTokens + OAuthenticatable + FilamentUser), `RolePermissionSeeder`, `AdminUserSeeder`, `routes/api.php`, `.env(.example)`, tests.
+
+> **Catatan implementasi:** Passport **13**, Filament **5**. Grant flow = **Password Grant** (opt-in via `enablePasswordGrant()`). Logout me-revoke access + refresh token (`AccessToken::revoke()` + revoke `RefreshToken` by `access_token_id`). Catatan test: revoke diverifikasi lewat state DB karena auth guard cache antar-request dalam satu proses test; perilaku runtime benar (diverifikasi via HTTP).
 
 ---
 

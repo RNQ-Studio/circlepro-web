@@ -168,9 +168,9 @@ Kedua jalur **berbagi** Models, Services, Policies, dan sistem RBAC yang sama. Y
 
 ## 5. Strategi Autentikasi
 
-### 5.1 API — Laravel Passport (OAuth2) ⚠️
+### 5.1 API — Laravel Passport (OAuth2) ✅ difinalisasi (Sesi 2)
 
-> ⚠️ **Keputusan tercatat: Passport.** Untuk konteks, berikut trade-off vs Sanctum agar bisa dievaluasi ulang bila kebutuhan berubah.
+> **Keputusan tercatat: Passport** (terpasang `13.x`). Trade-off vs Sanctum untuk konteks bila kebutuhan berubah.
 
 | | **Passport (dipilih)** | Sanctum (alternatif) |
 |---|---|---|
@@ -179,24 +179,27 @@ Kedua jalur **berbagi** Models, Services, Policies, dan sistem RBAC yang sama. Y
 | Kompleksitas | Lebih tinggi (keys, clients, grants) | Rendah |
 | Refresh token | Bawaan, standar OAuth2 | Manual |
 
-**Implementasi untuk Flutter (Password Grant / Personal Access — finalisasi di Sesi 2):**
-- Gunakan **Password Grant** atau **Personal Access Token** untuk first-party mobile app.
-- ⚠️ **Catatan:** Pada Passport versi terbaru, dukungan Password Grant mungkin perlu di-enable secara eksplisit / dianggap deprecated di beberapa rilis OAuth2. Verifikasi di Sesi 2 dan pilih grant flow yang sesuai (Password Grant vs Authorization Code with PKCE untuk mobile).
-- Endpoint auth: `POST /api/v1/auth/login` → kembalikan `access_token` + `refresh_token` + `expires_in`.
-- Endpoint: `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout` (revoke token), `GET /api/v1/auth/me`.
+**✅ Grant flow yang dipilih: Password Grant (proxy pattern).**
+- Alasan: deliverable butuh `access_token` + `refresh_token` + `expires_in`. Password Grant memberi refresh token standar dan paling sederhana untuk first-party mobile. (Personal Access Token tidak memberi refresh token; Authorization Code + PKCE lebih berat karena butuh redirect browser.)
+- ⚠️ **Catatan Passport 13:** Password Grant **opt-in** — harus di-enable via `Passport::enablePasswordGrant()` (di `AppServiceProvider::boot`). Client password-grant dibuat dengan `php artisan passport:client --password`; id & secret disimpan di env (`PASSPORT_PASSWORD_CLIENT_ID/SECRET`).
+- **Proxy pattern:** `AuthController` tidak mengekspos `/oauth/token` mentah. `AuthService` memvalidasi (termasuk cek `is_active`) lalu meneruskan ke grant secara internal, mengembalikan envelope standar.
+- Endpoint: `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout` (revoke access + refresh token), `GET /api/v1/auth/me`. Login & refresh diberi `throttle:6,1`.
+- Lifetime token (di `AppServiceProvider`): access **8 jam**, refresh **30 hari**.
 - Simpan token di Flutter via **flutter_secure_storage** (jangan SharedPreferences biasa).
+- ⚠️ **Setup keys:** `php artisan passport:keys` menulis `storage/oauth-*.key` (gitignored). Pada clone/CI baru, jalankan sebelum menjalankan API/test.
 
-### 5.2 Back-office — Session (Filament)
+### 5.2 Back-office — Session (Filament v5)
 
-- Filament memakai guard `web` standar Laravel (session + cookie).
+- Filament memakai guard `web` standar Laravel (session + cookie); panel di `/admin`.
 - Login UI bawaan Filament; tidak perlu membuat halaman login manual.
-- Akses panel dibatasi oleh `User::canAccessPanel()` + RBAC (mis. hanya role `admin`/`staff`).
+- Akses panel dibatasi oleh `User::canAccessPanel()`: hanya user `is_active` dengan salah satu role di `User::PANEL_ROLES` (`super-admin`, `admin`, `staff`).
 
-### 5.3 RBAC bersama — spatie/laravel-permission ⚠️
+### 5.3 RBAC bersama — spatie/laravel-permission ✅ difinalisasi (Sesi 2)
 
-- Satu sistem permission dipakai oleh kedua guard.
-- ⚠️ **Multi-guard:** spatie menyimpan `guard_name` pada role & permission. Tentukan di Sesi 2/3 apakah role didefinisikan untuk guard `web`, `api`, atau keduanya. Rekomendasi: definisikan permission netral dan assign role pada guard `web` (untuk Filament) serta pastikan pengecekan di API memakai guard yang konsisten. Uji `$user->can()` di kedua jalur.
-- Permission diperiksa via Policy (API) dan via Filament (`canViewAny`, dll.) — keduanya membaca dari sumber yang sama.
+- **✅ Strategi multi-guard:** semua role & permission didefinisikan pada **guard `web`** (lihat `RolePermissionSeeder`). Karena guard `web` (session) dan `api` (Passport) sama-sama memakai provider `users` (model `User`), spatie menganggap user "milik" kedua guard, sehingga `hasRole()`/`can()` resolve dengan benar baik di back-office maupun di API. Diverifikasi lewat test (`AuthTest`, `PanelAccessTest`).
+- **`super-admin` bypass:** `Gate::before` mengembalikan `true` untuk pemilik role `super-admin`, melewati semua pengecekan otorisasi (API + Filament).
+- Permission diperiksa via Policy (API) dan via Filament resource (`canViewAny`, dll.) — keduanya membaca sumber yang sama. (Resource-level enforcement: Sesi 3.)
+- Permission awal (Sesi 2): `{users,roles,categories}.{viewAny,view,create,update,delete}`. Role: `super-admin` (semua), `admin` (users + categories penuh, roles read), `staff` (categories tanpa delete).
 
 ---
 

@@ -31,6 +31,8 @@ class User extends Authenticatable implements FilamentUser, OAuthenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
+    protected string $guard_name = 'web';
+
     /** Roles allowed to access the back-office panel. */
     public const PANEL_ROLES = ['super-admin', 'admin', 'staff'];
 

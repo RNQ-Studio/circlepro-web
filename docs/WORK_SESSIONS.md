@@ -144,13 +144,14 @@ Rencana pembagian sesi kerja untuk implementasi Laravel Starter via Claude Code.
 3. **Dokumentasi pola "Menambah Data Master Baru":**
    - Tulis panduan langkah-demi-langkah (migrasi → model → policy → API controller/requests/resource → Filament resource → tests) di `docs/` atau README.
    - Tujuan: dev/sesi berikutnya bisa menyalin pola dengan cepat.
+   - Implementasi: [DATA_MASTER_PATTERN.md](DATA_MASTER_PATTERN.md).
 4. **Tests:** feature test API CRUD (termasuk filter/sort & authorization) + smoke test Filament resource.
 
 **Output / Deliverable:**
-- [ ] CRUD `Category` berfungsi penuh di API & back-office, dengan filter/sort/pagination konsisten.
-- [ ] Authorization (RBAC) ditegakkan di kedua jalur.
-- [ ] Dokumentasi pola data master tersedia & jelas.
-- [ ] Tests hijau.
+- [x] CRUD `Category` berfungsi penuh di API & back-office, dengan filter/sort/pagination konsisten.
+- [x] Authorization (RBAC) ditegakkan di kedua jalur.
+- [x] Dokumentasi pola data master tersedia & jelas.
+- [x] Tests hijau.
 - [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 **File dibuat/diubah:** migrasi/model `Category` (jika belum lengkap dari Sesi 1), `CategoryController`, Form Requests, `CategoryResource`, `CategoryPolicy`, `app/Filament/Resources/CategoryResource.php`, dokumentasi pola, tests.

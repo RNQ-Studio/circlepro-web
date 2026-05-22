@@ -174,9 +174,9 @@ Rencana pembagian sesi kerja untuk implementasi Laravel Starter via Claude Code.
 7. **CI** (opsional): GitHub Actions untuk lint + test.
 
 **Output / Deliverable:**
-- [ ] Dashboard & branding back-office tampil.
-- [ ] Dokumentasi "Cara Menjalankan" lengkap & teruji dari nol.
-- [ ] Suite test hijau; Pint & Larastan bersih.
+- [x] Dashboard & branding back-office tampil.
+- [x] Dokumentasi "Cara Menjalankan" lengkap & teruji dari nol.
+- [x] Suite test hijau; Pint & Larastan bersih.
 - [ ] (Opsional) API docs & CI aktif.
 - [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 

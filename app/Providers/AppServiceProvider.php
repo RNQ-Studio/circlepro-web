@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Policies\RolePolicy;
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
@@ -28,5 +31,10 @@ class AppServiceProvider extends ServiceProvider
 
         // super-admin bypasses every authorization check (API + back-office).
         Gate::before(fn (?User $user, string $ability): ?bool => $user?->hasRole('super-admin') ? true : null);
+
+        Scramble::configure()
+            ->withDocumentTransformers(function (OpenApi $openApi): void {
+                $openApi->secure(SecurityScheme::http('bearer'));
+            });
     }
 }

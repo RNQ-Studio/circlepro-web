@@ -88,6 +88,8 @@ php artisan passport:client --password          # isi PASSPORT_PASSWORD_CLIENT_I
 
 **Endpoint Auth API (Flutter):** `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`. Lihat [docs/ARCHITECTURE.md §5](docs/ARCHITECTURE.md).
 
+**Dokumentasi API:** Scramble menyediakan dokumentasi interaktif di `/docs/api` dan OpenAPI JSON di `/docs/api.json`. Endpoint docs hanya terbuka otomatis di `local`; untuk environment lain gunakan Gate `viewApiDocs`. Tim Flutter/Postman dapat memakai URL OpenAPI JSON tersebut sebagai sumber kontrak API.
+
 **Testing:** test berjalan di database PostgreSQL terpisah `laravel_starter_test` (lihat `phpunit.xml`). Buat database tersebut sekali, lalu:
 
 ```bash

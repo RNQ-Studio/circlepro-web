@@ -20,6 +20,9 @@ class AuthController extends Controller
 {
     public function __construct(private readonly AuthService $authService) {}
 
+    /**
+     * @unauthenticated
+     */
     public function login(LoginRequest $request): JsonResponse
     {
         $tokens = $this->authService->login(
@@ -30,6 +33,9 @@ class AuthController extends Controller
         return ApiResponse::success($tokens, 'Login successful');
     }
 
+    /**
+     * @unauthenticated
+     */
     public function refresh(RefreshTokenRequest $request): JsonResponse
     {
         $tokens = $this->authService->refresh(

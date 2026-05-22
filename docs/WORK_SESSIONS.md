@@ -169,7 +169,16 @@ Rencana pembagian sesi kerja untuk implementasi Laravel Starter via Claude Code.
 2. **Branding panel** (nama app, logo, warna).
 3. **Auth nice-to-have:** password reset (API + back-office), email verification.
 4. **Kualitas:** lengkapi feature/unit tests hingga cakupan modul inti memadai; pastikan Pint & Larastan bersih.
-5. **API docs** (opsional): Scribe/OpenAPI untuk tim Flutter.
+5. **API docs dengan Scramble** (OpenAPI otomatis untuk tim Flutter):
+   - Install `dedoc/scramble` sebagai dependency dokumentasi API.
+   - Publish/atur konfigurasi Scramble agar hanya mendokumentasikan route `api/v1`.
+   - Set metadata OpenAPI: title `Laravel Starter API`, version awal, server URL lokal, dan deskripsi singkat.
+   - Konfigurasi security scheme **Bearer token** untuk endpoint Passport (`Authorization: Bearer <token>`).
+   - Pastikan endpoint dokumentasi tersedia, misalnya `GET /docs/api` (UI) dan `GET /docs/api.json` (OpenAPI JSON).
+   - Pastikan schema request terbaca dari Form Request (`LoginRequest`, `StoreCategoryRequest`, dll.).
+   - Pastikan response utama terbaca dari API Resource/envelope standar; tambah PHPDoc/attribute hanya bila Scramble tidak bisa infer otomatis.
+   - Tambahkan smoke test untuk `/docs/api` dan `/docs/api.json` pada environment yang sesuai.
+   - Update README dengan cara membuka dokumentasi API dan cara share OpenAPI JSON ke tim Flutter/Postman.
 6. **Finalisasi README** bagian "Cara Menjalankan" dengan langkah & kredensial seeder konkret.
 7. **CI** (opsional): GitHub Actions untuk lint + test.
 
@@ -177,10 +186,11 @@ Rencana pembagian sesi kerja untuk implementasi Laravel Starter via Claude Code.
 - [x] Dashboard & branding back-office tampil.
 - [x] Dokumentasi "Cara Menjalankan" lengkap & teruji dari nol.
 - [x] Suite test hijau; Pint & Larastan bersih.
-- [ ] (Opsional) API docs & CI aktif.
+- [x] API docs Scramble aktif dan OpenAPI JSON bisa diakses.
+- [ ] (Opsional) CI aktif.
 - [ ] **Di-commit & di-push** ke `origin` sesuai [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-**File dibuat/diubah:** widget Filament, konfigurasi panel, fitur auth tambahan, README, (opsional) `.github/workflows/ci.yml`, file docs API.
+**File dibuat/diubah:** widget Filament, konfigurasi panel, fitur auth tambahan, README, konfigurasi Scramble, tests dokumentasi API, (opsional) `.github/workflows/ci.yml`.
 
 ---
 

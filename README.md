@@ -13,7 +13,7 @@ Tujuannya adalah menyediakan kerangka kerja yang bersih, konsisten, dan siap dik
 
 | Komponen | Pilihan | Versi yang Direkomendasikan |
 |---|---|---|
-| Framework | Laravel | `12.x` (verifikasi `13.x` jika sudah stable saat implementasi ⚠️) |
+| Framework | Laravel | `13.x` (terpasang `13.11`) |
 | Bahasa | PHP | `8.3+` (8.4 didukung) |
 | Database | PostgreSQL | `16` atau `17` |
 | API Auth | Laravel Passport | `12.x` (OAuth2 server) |
@@ -48,10 +48,12 @@ Tujuannya adalah menyediakan kerangka kerja yang bersih, konsisten, dan siap dik
 
 ---
 
-## Cara Menjalankan (placeholder — diisi saat implementasi)
+## Cara Menjalankan
+
+> Prasyarat: **PHP 8.3+**, **Composer 2**, **PostgreSQL 14+**, dan **Node 20+**.
 
 ```bash
-# 1. Clone & install dependency
+# 1. Install dependency
 composer install
 npm install
 
@@ -59,21 +61,35 @@ npm install
 cp .env.example .env
 php artisan key:generate
 
-# 3. Konfigurasi koneksi PostgreSQL di .env, lalu migrasi + seed
+# 3. Isi kredensial PostgreSQL di .env (DB_DATABASE, DB_USERNAME, DB_PASSWORD),
+#    buat database-nya, lalu migrasi + seed
 php artisan migrate --seed
 
-# 4. Setup Passport (generate encryption keys & client)
-php artisan passport:install
-
-# 5. Build assets & jalankan
+# 4. Build assets & jalankan
 npm run build
 php artisan serve
 ```
 
-> Bagian ini akan dilengkapi dengan detail konkret (URL back-office, kredensial seeder default, dll.) di akhir Sesi 1–2.
+Cek koneksi: buka `GET /api/v1/health` → harus mengembalikan envelope JSON `{ "success": true, ... }`.
+
+**Akun admin default (seeder):** `admin@example.com` / `password` — *placeholder; role `super-admin` di-assign pada Sesi 2.*
+
+**Testing:** test berjalan di database PostgreSQL terpisah `laravel_starter_test` (lihat `phpunit.xml`). Buat database tersebut sekali, lalu:
+
+```bash
+composer test       # php artisan test
+composer lint       # pint (format)
+composer analyse    # phpstan (Larastan), memory limit 1G
+```
+
+> **Belum tersedia (sesi berikutnya):** Passport (Sesi 2) & Filament back-office `/admin` (Sesi 2). Bagian ini diperbarui saat fitur tersebut masuk.
 
 ---
 
 ## Status Proyek
 
-🚧 **Tahap planning.** Belum ada kode implementasi. Lihat [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md) untuk roadmap implementasi bertahap.
+✅ **Sesi 1 selesai** — fondasi proyek: Laravel 13 + PostgreSQL, struktur direktori, API Response standard, tooling (Pint/Larastan), migrasi awal (users, permission, categories), seeder, dan endpoint `GET /api/v1/health`.
+
+⏭️ **Berikutnya: Sesi 2** — Auth (Passport API + session Filament) & RBAC. Lihat [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md).
+
+> Catatan dev lokal: untuk produksi gunakan user PostgreSQL khusus least-privilege (bukan `postgres` superuser).

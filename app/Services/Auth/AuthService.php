@@ -3,6 +3,7 @@
 namespace App\Services\Auth;
 
 use App\Models\User;
+use App\Models\UserDevice;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
@@ -12,11 +13,12 @@ use Laravel\Passport\RefreshToken;
 class AuthService
 {
     /**
+     * @param  array{device_id?: string, platform?: string, os_version?: string|null, app_version?: string|null, device_name?: string|null, push_token?: string|null}  $deviceInfo
      * @return array{access_token: string, refresh_token: string, token_type: string, expires_in: int}
      *
      * @throws AuthenticationException|AuthorizationException
      */
-    public function login(string $email, string $password): array
+    public function login(string $email, string $password, array $deviceInfo = []): array
     {
         $user = User::query()->where('email', $email)->first();
 
@@ -24,11 +26,18 @@ class AuthService
             throw new AuthorizationException('Your account is inactive.');
         }
 
-        return $this->issueToken([
+        $tokens = $this->issueToken([
             'grant_type' => 'password',
             'username' => $email,
             'password' => $password,
         ]);
+
+        // Reload user after token issuance to ensure it exists
+        if ($user !== null && isset($deviceInfo['device_id'], $deviceInfo['platform'])) {
+            $this->upsertDevice($user, $deviceInfo);
+        }
+
+        return $tokens;
     }
 
     /**
@@ -44,7 +53,7 @@ class AuthService
         ]);
     }
 
-    public function logout(User $user): void
+    public function logout(User $user, ?string $deviceId = null): void
     {
         $accessToken = $user->token();
 
@@ -61,6 +70,35 @@ class AuthService
         }
 
         $accessToken->revoke();
+
+        // Nullify push token so device stops receiving notifications
+        if ($deviceId !== null) {
+            UserDevice::query()
+                ->where('user_id', $user->getKey())
+                ->where('device_id', $deviceId)
+                ->update(['push_token' => null]);
+        }
+    }
+
+    /**
+     * @param  array{device_id: string, platform: string, os_version?: string|null, app_version?: string|null, device_name?: string|null, push_token?: string|null}  $deviceInfo
+     */
+    private function upsertDevice(User $user, array $deviceInfo): void
+    {
+        UserDevice::query()->updateOrCreate(
+            [
+                'user_id' => $user->getKey(),
+                'device_id' => $deviceInfo['device_id'],
+            ],
+            [
+                'platform' => $deviceInfo['platform'],
+                'os_version' => $deviceInfo['os_version'] ?? null,
+                'app_version' => $deviceInfo['app_version'] ?? null,
+                'device_name' => $deviceInfo['device_name'] ?? null,
+                'push_token' => $deviceInfo['push_token'] ?? null,
+                'last_active_at' => now(),
+            ]
+        );
     }
 
     /**

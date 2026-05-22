@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Support\Enums\DevicePlatform;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class LoginRequest extends FormRequest
 {
@@ -19,6 +21,14 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+
+            // Optional device info — sent by mobile clients
+            'device_id' => ['sometimes', 'string', 'max:255'],
+            'platform' => ['sometimes', 'string', Rule::enum(DevicePlatform::class)],
+            'os_version' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'app_version' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'device_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'push_token' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
     }
 }

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Excel Import and Export APIs (`GET /api/users/export` and `POST /api/users/import`) using the `maatwebsite/excel` package, with strict row validation and upsert logic.
 - Standardized `ApiErrorCode` enum under `App\Support\Enums` to enforce robust API response schemas (`CF-027`).
 - GitHub Actions CI pipeline configuration (`.github/workflows/ci.yml`) to validate linting, phpstan, and phpunit against PostgreSQL (`CF-025`).
 - Developer shortcuts using a root `Makefile` (`CF-029`).

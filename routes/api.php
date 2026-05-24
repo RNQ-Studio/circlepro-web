@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\UserExcelController;
 use App\Http\Controllers\Api\V1\AppController;
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuthController;
@@ -11,6 +12,16 @@ use App\Http\Controllers\Api\V1\OtpController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Excel Import & Export Routes (Tanpa Middleware Auth)
+|--------------------------------------------------------------------------
+| Jika Anda ingin memproteksi endpoint ini dengan middleware auth Passport di kemudian hari,
+| Anda bisa menambahkan middleware: ->middleware('auth:api')
+*/
+Route::get('users/export', [UserExcelController::class, 'export']);
+Route::post('users/import', [UserExcelController::class, 'import']);
 
 Route::prefix('v1')->group(function (): void {
     Route::get('health', HealthController::class);

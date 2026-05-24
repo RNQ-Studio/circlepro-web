@@ -116,8 +116,28 @@ cp .env.example .env
 ./vendor/bin/sail npm run build
 ```
 
-Setelah kontainer berjalan, aplikasi dapat diakses di `http://localhost`. Anda juga dapat memantau kotak masuk email pengujian (Mailpit) di `http://localhost:8025`.
-Untuk menghentikan kontainer, jalankan `./vendor/bin/sail down`.
+Setelah kontainer berjalan, untuk menghentikan kontainer Anda dapat menjalankan `./vendor/bin/sail down`.
+
+---
+
+## 🌐 Cara Mengakses Aplikasi
+
+Setelah seluruh proses inisialisasi selesai dan server dev berjalan, Anda dapat mengakses layanan di alamat berikut:
+
+### A. Jika Menggunakan Opsi A (Tooling Lokal / PHP Artisan)
+* **Aplikasi Utama (Web / Landing Page)**: [http://localhost:8000](http://localhost:8000) (atau [http://127.0.0.1:8000](http://127.0.0.1:8000))
+* **Panel Administrasi (Filament v5)**: [http://localhost:8000/admin](http://localhost:8000/admin)
+* **Dokumentasi API Interaktif (Scramble)**: [http://localhost:8000/docs/api](http://localhost:8000/docs/api)
+* **Kesehatan API (Health Check JSON)**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
+
+### B. Jika Menggunakan Opsi B (Docker / Laravel Sail)
+* **Aplikasi Utama (Web / Landing Page)**: [http://localhost](http://localhost) (Port 80 default)
+* **Panel Administrasi (Filament v5)**: [http://localhost/admin](http://localhost/admin)
+* **Dokumentasi API Interaktif (Scramble)**: [http://localhost/docs/api](http://localhost/docs/api)
+* **Kesehatan API (Health Check JSON)**: [http://localhost/api/v1/health](http://localhost/api/v1/health)
+* **Penguji Email (Mailpit Dashboard)**: [http://localhost:8025](http://localhost:8025)
+
+> 🔑 **Kredensial Default Login**: Gunakan email `admin@example.com` dan password `password` untuk masuk ke Panel Admin atau menguji rute login API. (Lihat rinciannya di [Akun Default untuk Login Pengembang](#-akun-default-untuk-login-pengembang)).
 
 ---
 

@@ -29,7 +29,7 @@ Tujuannya adalah menyediakan kerangka kerja yang bersih, konsisten, dan siap dik
 ## Prinsip Desain
 
 - **API-first** — Kontrak API adalah warga kelas satu. Back-office dan mobile adalah dua konsumen yang setara di atas domain logic yang sama.
-- **Separation of concerns** — Controller tipis, logika bisnis di **Service layer**, akses data via **Eloquent** (tanpa Repository pattern — lihat [ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+- **Separation of concerns** — Controller tipis, logika bisnis di **Service layer**, akses data via **Eloquent** (tanpa Repository pattern — lihat [architecture.md](docs/architecture.md)).
 - **Konsistensi kontrak** — Semua response API mengikuti satu format JSON standar (envelope + error format konsisten).
 - **Single source of truth untuk authorization** — Satu sistem RBAC (spatie) dipakai bersama oleh API guard dan web guard.
 - **Hindari over-engineering** — Tidak ada abstraksi spekulatif. Tambahkan layer hanya ketika kebutuhan nyata muncul.
@@ -41,61 +41,73 @@ Tujuannya adalah menyediakan kerangka kerja yang bersih, konsisten, dan siap dik
 
 | Dokumen | Isi |
 |---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arsitektur sistem, layering, struktur direktori, strategi auth, package, best practice Flutter ↔ Laravel |
-| [docs/MODULES.md](docs/MODULES.md) | Daftar modul & fitur starter beserta prioritas (core / nice-to-have) |
-| [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md) | Rencana pembagian sesi kerja (~5 jam/sesi) untuk implementasi bertahap |
-| [docs/DATA_MASTER_PATTERN.md](docs/DATA_MASTER_PATTERN.md) | Pola replikasi CRUD data master baru berdasarkan modul `Category` |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Panduan branch, konvensi commit (Conventional Commits), quality gate, & push |
+| [docs/features.md](docs/features.md) | Katalog dan spesifikasi seluruh fitur sistem terimplementasi secara komprehensif |
+| [docs/architecture.md](docs/architecture.md) | Arsitektur sistem, layering, struktur direktori, strategi auth, dan praktik integrasi Flutter ↔ Laravel |
+| [docs/data_master_pattern.md](docs/data_master_pattern.md) | Pola standar dan petunjuk replikasi CRUD data master baru berdasarkan contoh `Category` |
+| [docs/deployment.md](docs/deployment.md) | Panduan go-live produksi lengkap (Nginx block, Supervisor worker, dan migrasi) |
+| [docs/erd/database_erd.md](docs/erd/database_erd.md) | Visualisasi skema database interaktif (Mermaid ERD) dan kamus data (*data dictionary*) |
+| [CLAUDE.md](CLAUDE.md) | Panduan perintah cepat (linting, test, static analysis) untuk AI agent dan kolaborator |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Aturan kontribusi repositori, manajemen Git Flow, konvensi Conventional Commits, dan quality gate |
+| [SECURITY.md](SECURITY.md) | Kebijakan pelaporan privat celah keamanan sensitif beserta SLA respons |
 
 ---
 
-## Cara Menjalankan
+## Panduan Memulai Cepat (Onboarding Guide)
 
-### Opsi A: Menjalankan Secara Lokal (Local Environment)
+Jika Anda baru saja melakukan *clone* pada project ini, ikuti langkah-langkah di bawah ini untuk menyalakan lingkungan pengembangan lokal Anda kurang dari 5 menit.
 
-> Prasyarat: **PHP 8.3+**, **Composer 2**, **PostgreSQL 14+**, dan **Node 20+**.
-> Di Windows lokal proyek ini pernah memakai `C:\php8.3.6\php.exe` karena PATH default masih PHP 7.4.
+---
+
+### Opsi A: Instalasi Menggunakan Tooling Lokal (Makefile / Composer)
+
+> **Prasyarat**: Anda wajib memiliki **PHP 8.3+**, **Composer 2**, **PostgreSQL 14+**, dan **Node 20+** terpasang di sistem operasi lokal Anda.
+> *Catatan Windows*: Jika PATH default Anda masih menggunakan PHP lama, Anda dapat mengarahkan path php secara manual atau menggunakan binary PHP 8.3 spesifik (mis. `C:\php8.3.6\php.exe`).
 
 ```bash
-# 1. Install dependency
-composer install
-npm install
+# Langkah 1: Jalankan setup otomatis dependensi & aset
+make setup
 
-# 2. Setup environment
-cp .env.example .env
-php artisan key:generate
+# Langkah 2: Buat database di PostgreSQL lokal Anda
+# (Isi kredensial PostgreSQL di berkas .env Anda terlebih dahulu)
+# DB_CONNECTION=pgsql
+# DB_DATABASE=laravel_starter
+# DB_USERNAME=<user>
+# DB_PASSWORD=<password>
 
-# 3. Isi kredensial PostgreSQL di .env, lalu buat database aplikasi:
-#    DB_CONNECTION=pgsql
-#    DB_DATABASE=laravel_starter
-#    DB_USERNAME=<user>
-#    DB_PASSWORD=<password>
-php artisan migrate --seed
+# Langkah 3: Jalankan migrasi, seeder default, dan kunci Passport
+make fresh
 
-# 4. Build assets & jalankan
-npm run build
-php artisan serve
+# Langkah 4: Jalankan server dev lokal (Concurrently: serve, queue, logs, vite)
+make dev
 ```
 
-### Opsi B: Menjalankan Menggunakan Docker (Laravel Sail)
+---
+
+### Opsi B: Instalasi Menggunakan Docker (Laravel Sail)
 
 Bagi Anda yang ingin menginisialisasi lingkungan pengembangan instan tanpa perlu memasang PHP, PostgreSQL, Node, atau Redis secara lokal di mesin Anda, Anda dapat menggunakan kontainerisasi **Laravel Sail** yang sudah terintegrasi.
 
-> Prasyarat: **Docker Desktop** telah terpasang dan berjalan di sistem Anda.
+> **Prasyarat**: Aplikasi **Docker Desktop** telah terpasang dan berjalan di sistem Anda.
 
 ```bash
-# 1. Setup environment
+# Langkah 1: Persiapan Environment
 cp .env.example .env
 
-# 2. Nyalakan kontainer Docker (PostgreSQL, Redis, Mailpit, PHP 8.3) di background
-# (Jika baru pertama kali, proses build image akan memakan waktu beberapa menit)
+# Langkah 2: Nyalakan kontainer Docker secara latar belakang (background)
+# (Proses build awal image akan memakan waktu beberapa menit)
 ./vendor/bin/sail up -d
 
-# 3. Generate key & jalankan migrasi database serta seeder
-./vendor/bin/sail artisan key:generate
-./vendor/bin/sail artisan migrate --seed
+# Langkah 3: Unduh dependensi composer di dalam kontainer
+./vendor/bin/sail composer install
 
-# 4. Build assets & jalankan frontend compiler
+# Langkah 4: Generate key aplikasi & kunci Passport
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan passport:keys
+
+# Langkah 5: Jalankan migrasi database & seeders
+./vendor/bin/sail artisan migrate:fresh --seed
+
+# Langkah 6: Build aset frontend
 ./vendor/bin/sail npm install
 ./vendor/bin/sail npm run build
 ```
@@ -103,59 +115,84 @@ cp .env.example .env
 Setelah kontainer berjalan, aplikasi dapat diakses di `http://localhost`. Anda juga dapat memantau kotak masuk email pengujian (Mailpit) di `http://localhost:8025`.
 Untuk menghentikan kontainer, jalankan `./vendor/bin/sail down`.
 
+---
 
-Cek koneksi: buka `GET /api/v1/health` → harus mengembalikan envelope JSON `{ "success": true, ... }`.
+### ⚠️ Langkah Wajib Pasca Inisialisasi (Passport Client Setup)
 
-**Akun admin default (seeder):** `admin@example.com` / `password` (role `super-admin`). Login back-office di `/admin`.
+Endpoint login API (`POST /api/v1/auth/login`) bergantung sepenuhnya pada Laravel Passport Password Client. Pada instalasi/clone baru, Anda **WAJIB** membuat Password Client baru dengan perintah:
 
+```bash
+# Untuk Setup Lokal:
+php artisan passport:client --password
+
+# Untuk Setup Docker Sail:
+./vendor/bin/sail artisan passport:client --password
+```
+
+Setelah menjalankan perintah tersebut, Anda akan mendapatkan output **Client ID** dan **Client Secret**. Salin kedua nilai tersebut dan masukkan ke dalam variabel lingkungan berikut di file `.env`:
+```env
+PASSPORT_PASSWORD_CLIENT_ID=<Client-ID-Anda>
+PASSPORT_PASSWORD_CLIENT_SECRET=<Client-Secret-Anda>
+```
 > [!WARNING]
-> **PENTING: Konfigurasi Passport Client ID & Client Secret**
-> Endpoint login API (`POST /api/v1/auth/login`) bergantung sepenuhnya pada Laravel Passport Password Client. Pada instalasi baru atau clone baru, Anda **WAJIB** menjalankan perintah berikut:
-> ```bash
-> php artisan passport:keys
-> php artisan passport:client --password
-> ```
-> Setelah menjalankan perintah kedua, Anda akan mendapatkan **Client ID** dan **Client Secret**. Salin kedua nilai tersebut dan masukkan ke dalam variabel lingkungan berikut di file `.env`:
-> ```env
-> PASSPORT_PASSWORD_CLIENT_ID=<Client-ID-Anda>
-> PASSPORT_PASSWORD_CLIENT_SECRET=<Client-Secret-Anda>
-> ```
-> Jika langkah ini terlewatkan, API Login akan mengembalikan error kegagalan autentikasi atau server error.
+> Jika langkah Passport Client ini terlewatkan, seluruh endpoint Login API akan mengembalikan error kegagalan autentikasi atau *internal server error*.
 
+---
 
-**Endpoint Auth API (Flutter):** `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`. Lihat [docs/ARCHITECTURE.md §5](docs/ARCHITECTURE.md).
+### 🇮🇩 Database Wilayah Geografis Indonesia (Opsional & Offline)
 
-**Dokumentasi API:** Scramble menyediakan dokumentasi interaktif di `/docs/api` dan OpenAPI JSON di `/docs/api.json`. Endpoint docs hanya terbuka otomatis di `local`; untuk environment lain gunakan Gate `viewApiDocs`. Tim Flutter/Postman dapat memakai URL OpenAPI JSON tersebut sebagai sumber kontrak API.
+Starter ini dilengkapi data administratif Indonesia (~245.000 data parent-child). Agar proses inisialisasi lokal Anda lancar dan tidak terhambat request HTTP eksternal yang lambat, seeding dilakukan secara **offline** menggunakan JSON fixtures lokal di storage.
+Jalankan perintah berikut untuk mengunduh berkas wilayah secara offline ke storage Anda sebelum melakukan seed region:
 
-**Testing:** Pengujian secara default berjalan di database PostgreSQL terpisah bernama `laravel_starter_test` menggunakan konfigurasi di `.env.testing` agar sepenuhnya selaras dengan lingkungan produksi (PostgreSQL).
-
-Jika Anda menggunakan **Laravel Sail (Docker)**, database pengujian `laravel_starter_test` sudah dibuat dan diinisialisasi secara otomatis saat kontainer dijalankan.
-
-Jika Anda menjalankan secara **lokal tanpa Docker/Sail**, Anda **WAJIB** membuat database pengujian tersebut terlebih dahulu sebelum menjalankan pengujian:
 ```bash
-# Untuk PostgreSQL lokal (gunakan terminal/tool pilihan Anda):
-createdb laravel_starter_test
-```
+# Untuk Setup Lokal:
+php artisan regions:download
 
-Setelah database siap, Anda dapat menjalankan test suite dan linter dengan perintah berikut:
-```bash
-php artisan test
-vendor/bin/pint
-vendor/bin/phpstan analyse --memory-limit=1G
+# Untuk Setup Docker Sail:
+./vendor/bin/sail artisan regions:download
 ```
+*Untuk mengaktifkan seeder wilayah saat `make fresh`, ubah variabel di `.env` menjadi: `SEED_REGIONS=true`.*
+
+---
+
+### 🔑 Akun Default untuk Login Pengembang
+
+Setelah database berhasil diinisialisasi, Anda dapat menggunakan kredensial bawaan (*seeder*) berikut untuk masuk ke sistem:
+
+| Username / Email | Password | Role Akses (Spatie) | Tujuan Login |
+|---|---|---|---|
+| `admin@example.com` | `password` | `super-admin` | Panel Admin `/admin` & Login API |
+
+> [!NOTE]
+> Peran default `super-admin` memiliki bypass otorisasi penuh melalui `Gate::before`. Anda dapat menambahkan pengguna baru atau menetapkan peran `admin` atau `staff` lainnya secara visual langsung melalui Panel Admin Filament di menu **Users**.
+
+---
+
+### 🧪 Verifikasi Koneksi & Menjalankan Tes
+
+* **Verifikasi API**: Buka `GET /api/v1/health` → harus mengembalikan envelope JSON sukses `{ "success": true, "message": "OK", ... }`.
+* **Dokumentasi API**: Scramble menyediakan dokumentasi interaktif di `/docs/api` dan OpenAPI JSON di `/docs/api.json` saat berada di environment `local`.
+* **Testing Database**: Pengujian secara default berjalan di database PostgreSQL terpisah bernama `laravel_starter_test`.
+  * *Setup Lokal*: Buat database test terlebih dahulu di pgsql dengan `createdb laravel_starter_test`.
+  * *Setup Docker Sail*: Database test sudah terbuat secara otomatis.
+* **Menjalankan Tes & Linting**:
+  ```bash
+  # Menjalankan seluruh test suite
+  make test
+
+  # Menjalankan formater koding otomatis (Pint)
+  make lint
+
+  # Menjalankan static analysis (PHPStan/Larastan)
+  make analyse
+
+  # Menjalankan quality gate penuh sebelum melakukan git push
+  make quality
+  ```
 
 > [!TIP]
 > **Fallback ke SQLite In-Memory:**
-> Jika Anda belum memasang PostgreSQL atau ingin menjalankan tes secara super cepat menggunakan driver SQLite `:memory:`, Anda cukup menghapus komentar (uncomment) bagian SQLite di berkas `phpunit.xml` atau mengatur `DB_CONNECTION=sqlite` dan `DB_DATABASE=:memory:` di berkas `.env.testing`.
-
-Jika PATH masih mengarah ke PHP lama di Windows, jalankan quality gate dengan binary PHP 8.3:
-
-```powershell
-C:\php8.3.6\php.exe artisan test
-C:\php8.3.6\php.exe vendor\bin\pint
-C:\php8.3.6\php.exe vendor\bin\phpstan analyse --memory-limit=1G
-```
-
+> Jika Anda belum memasang PostgreSQL test atau ingin menjalankan tes secara super cepat menggunakan driver SQLite `:memory:`, Anda cukup menghapus komentar (uncomment) bagian SQLite di berkas `phpunit.xml` atau mengatur `DB_CONNECTION=sqlite` dan `DB_DATABASE=:memory:` di berkas `.env.testing`.
 
 ---
 
@@ -210,6 +247,6 @@ vendor/bin/phpunit
 
 ✅ **Sesi 4 selesai** — Data Master CRUD generik: API + back-office `Category`, filter/sort/pagination, policy RBAC, dokumentasi pola data master, dan test.
 
-🟨 **Sesi 5 berjalan** — Polish: dashboard/branding back-office, dokumentasi cara menjalankan, quality gate, dan nice-to-have terpilih. Lihat [docs/WORK_SESSIONS.md](docs/WORK_SESSIONS.md).
+✅ **Sesi 5 selesai** — Polish & Finalisasi: Branding back-office premium, pembersihan dokumentasi usang, standardisasi quality gate, linter, dan penerbitan katalog fitur lengkap di [docs/features.md](docs/features.md).
 
 > Catatan dev lokal: untuk produksi gunakan user PostgreSQL khusus least-privilege (bukan `postgres` superuser).

@@ -159,6 +159,47 @@ C:\php8.3.6\php.exe vendor\bin\phpstan analyse --memory-limit=1G
 
 ---
 
+## Panduan Pra-Push & Quality Gates (Pre-Push Best Practices)
+
+Untuk menjaga repositori dan pipeline CI GitHub tetap bersih, hijau (lulus), dan bebas dari kegagalan build, setiap pengembang **sangat direkomendasikan** untuk memvalidasi kodenya secara lokal sebelum menjalankan `git push`.
+
+Jalankan rangkaian perintah berikut secara berurutan di terminal lokal Anda sebelum melakukan push:
+
+### 1. Jalankan Linter & Pemformat Kode (Pint)
+Merapikan dan memformat kode Anda secara otomatis sesuai standar PSR-12:
+```bash
+# Melakukan perbaikan otomatis (direkomendasikan)
+vendor/bin/pint
+
+# Hanya memeriksa tanpa mengubah (opsional, untuk memastikan)
+vendor/bin/pint --test
+```
+
+### 2. Jalankan Analisis Kode Statis (PHPStan/Larastan)
+Mendeteksi potensi kesalahan pengetikan, parameter salah, atau bug tipe data di level strictness tinggi (Level 5):
+```bash
+vendor/bin/phpstan analyse --memory-limit=1G
+```
+
+### 3. Jalankan Seluruh Test Suite (PHPUnit)
+Memastikan tidak ada fitur yang rusak (*zero-regression*) akibat perubahan kode baru Anda:
+```bash
+# Menggunakan test runner artisan
+php artisan test
+
+# ATAU menjalankan PHPUnit secara langsung
+vendor/bin/phpunit
+```
+
+> [!IMPORTANT]
+> **Checklist Utama Sebelum Push:**
+> 1. **Pint Pass:** `vendor/bin/pint --test` menghasilkan `Pint passed`.
+> 2. **PHPStan Pass:** Analisis statis mengembalikan `[OK] No errors`.
+> 3. **Tests Pass:** Seluruh pengujian (Feature & Unit) berwarna hijau (`OK / 100% passed`).
+> 4. **Clear Configuration Cache:** Pastikan Anda telah menjalankan `php artisan config:clear` agar variabel lingkungan pengujian di `.env.testing` atau `phpunit.xml` dibaca secara dinamis dan tidak macet di cache konfigurasi.
+
+---
+
 ## Status Proyek
 
 ✅ **Sesi 1 selesai** — fondasi: Laravel 13 + PostgreSQL, struktur direktori, API Response standard, tooling (Pint/Larastan), migrasi awal, seeder, endpoint `GET /api/v1/health`.

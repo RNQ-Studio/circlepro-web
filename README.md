@@ -139,6 +139,48 @@ PASSPORT_PASSWORD_CLIENT_SECRET=<Client-Secret-Anda>
 
 ---
 
+### 🛠️ Pengaturan Tambahan Wajib (Firebase FCM, Storage Symlink, & Queue Worker)
+
+Agar seluruh fitur premium seperti pengunggahan avatar dan pengiriman push notification FCM asinkron berjalan lancar tanpa error di lingkungan lokal, Anda **WAJIB** melakukan konfigurasi berikut:
+
+#### 1. Kredensial Firebase Cloud Messaging (FCM)
+Aplikasi menggunakan **Firebase Admin SDK** untuk mengirim notifikasi ke Flutter client.
+1. Unduh berkas **Service Account JSON** dari Firebase Console Anda (Project Settings → Service Accounts → Generate New Private Key).
+2. Simpan berkas JSON tersebut di direktori lokal Anda, misalnya di `storage/app/firebase/service-account.json`.
+3. Buka berkas `.env` lokal Anda, lalu daftarkan jalurnya pada variabel berikut:
+   ```env
+   FIREBASE_CREDENTIALS=storage/app/firebase/service-account.json
+   ```
+> [!IMPORTANT]
+> Jangan pernah mengunggah berkas `service-account.json` asli Anda ke Git repository karena berkas tersebut bersifat rahasia (sudah di-*ignore* otomatis di `.gitignore`).
+
+#### 2. Aktivasi Storage Symlink (Akses URL Avatar)
+Fitur unggah avatar pengguna menyimpan berkas di storage terlindungi. Jalankan symlink agar gambar dapat diakses oleh browser/Flutter:
+```bash
+# Untuk Setup Lokal:
+php artisan storage:link
+
+# Untuk Setup Docker Sail:
+./vendor/bin/sail artisan storage:link
+```
+> [!WARNING]
+> Jika langkah ini terlewat, pengunggahan avatar akan sukses, namun URL avatar yang dikembalikan API akan menghasilkan error **404 Not Found** saat dibuka.
+
+#### 3. Menjalankan Queue Worker (Pemproses Antrean Latar Belakang)
+Pengiriman notifikasi Firebase diproses secara asinkron agar performa API sangat cepat. Untuk memproses antrean di lokal, jalankan perintah worker berikut di terminal terpisah:
+```bash
+# Opsi 1: Menggunakan Perintah Concurrently (Direkomendasikan - Otomatis Queue + Serve + Vite)
+make dev
+
+# Opsi 2: Menjalankan Queue Worker Lokal secara Manual
+php artisan queue:listen
+
+# Opsi 3: Menjalankan Queue Worker di Docker Sail secara Manual
+./vendor/bin/sail artisan queue:listen
+```
+
+---
+
 ### 🇮🇩 Database Wilayah Geografis Indonesia (Opsional & Offline)
 
 Starter ini dilengkapi data administratif Indonesia (~245.000 data parent-child). Agar proses inisialisasi lokal Anda lancar dan tidak terhambat request HTTP eksternal yang lambat, seeding dilakukan secara **offline** menggunakan JSON fixtures lokal di storage.
@@ -165,6 +207,42 @@ Setelah database berhasil diinisialisasi, Anda dapat menggunakan kredensial bawa
 
 > [!NOTE]
 > Peran default `super-admin` memiliki bypass otorisasi penuh melalui `Gate::before`. Anda dapat menambahkan pengguna baru atau menetapkan peran `admin` atau `staff` lainnya secara visual langsung melalui Panel Admin Filament di menu **Users**.
+
+---
+
+### 🗺️ Peta Rute & Endpoint Utama API
+
+Untuk mempercepat integrasi dengan **Flutter Client**, berikut adalah ringkasan endpoint API utama yang terstruktur di bawah prefix `/api/v1/`:
+
+* **Autentikasi Mandiri & Pengelolaan Sesi**
+  * `POST /api/v1/auth/register` — Pendaftaran mandiri pengguna baru.
+  * `POST /api/v1/auth/login` — Masuk sistem menggunakan email & password (mengembalikan access & refresh token).
+  * `POST /api/v1/auth/refresh` — Memperbarui sesi menggunakan refresh token.
+  * `POST /api/v1/auth/logout` — Keluar sistem (mencabut token aktif).
+  * `POST /api/v1/auth/logout-all` — Keluar dari seluruh perangkat secara massal.
+* **OTP & Verifikasi Telepon / Email**
+  * `POST /api/v1/auth/otp/send` — Mengirimkan kode OTP login/verifikasi.
+  * `POST /api/v1/auth/otp/verify` — Memverifikasi kode OTP.
+  * `POST /api/v1/auth/email/send-verification` — Mengirim ulang tautan verifikasi email.
+  * `POST /api/v1/auth/email/verify` — Memproses verifikasi email.
+  * `POST /api/v1/auth/forgot-password` — Mengirimkan tautan pemulihan kata sandi.
+  * `POST /api/v1/auth/reset-password` — Melakukan reset kata sandi baru.
+* **Pengelolaan Profil (Wajib Autentikasi `Bearer Token`)**
+  * `GET /api/v1/auth/me` — Mengambil data profil aktif.
+  * `PUT /api/v1/auth/me` — Memperbarui informasi profil pribadi.
+  * `POST /api/v1/auth/avatar` — Mengunggah foto profil (*avatar*) pengguna secara aman.
+  * `POST /api/v1/auth/change-password` — Mengubah password pribadi.
+* **Notifikasi Pengguna (Wajib Autentikasi)**
+  * `GET /api/v1/notifications` — List notifikasi in-app pengguna.
+  * `GET /api/v1/notifications/unread-count` — Menghitung jumlah notifikasi yang belum dibaca.
+  * `POST /api/v1/notifications/read-all` — Menandai seluruh notifikasi telah dibaca.
+  * `POST /api/v1/notifications/{notification}/read` — Menandai satu notifikasi tertentu telah dibaca.
+* **Data Master Kategori (Terproteksi Kebijakan RBAC)**
+  * `GET /api/v1/categories` — List data master kategori (Mendukung whitelist filter & sort).
+  * `POST /api/v1/categories` — Membuat kategori baru.
+  * `GET /api/v1/categories/{category}` — Detail satu kategori.
+  * `PUT /api/v1/categories/{category}` — Memperbarui kategori.
+  * `DELETE /api/v1/categories/{category}` — Menghapus kategori (*soft deletes*).
 
 ---
 

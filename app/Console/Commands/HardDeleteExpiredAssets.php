@@ -3,11 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Models\Asset;
-use App\Support\Enums\AssetStatus;
+use App\Services\AssetDeletionService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class HardDeleteExpiredAssets extends Command
@@ -16,7 +15,7 @@ class HardDeleteExpiredAssets extends Command
 
     protected $description = 'Hapus permanen file asset dari storage & tandai hard_deleted setelah jadwal tiba';
 
-    public function handle(): int
+    public function handle(AssetDeletionService $deletionService): int
     {
         $chunk = (int) $this->option('chunk');
         $success = 0;
@@ -26,20 +25,11 @@ class HardDeleteExpiredAssets extends Command
         // chunkById aman karena record keluar dari window setelah status berubah jadi hard_deleted.
         Asset::query()
             ->pendingHardDelete()
-            ->chunkById($chunk, function (Collection $assets) use (&$success, &$failed): void {
+            ->chunkById($chunk, function (Collection $assets) use (&$success, &$failed, $deletionService): void {
                 /** @var Collection<int, Asset> $assets */
                 foreach ($assets as $asset) {
                     try {
-                        $disk = Storage::disk($asset->storage_type->disk());
-
-                        // Idempoten: kalau file sudah tidak ada, anggap berhasil dan lanjut tandai.
-                        if ($disk->exists($asset->path)) {
-                            $disk->delete($asset->path);
-                        }
-
-                        $asset->status = AssetStatus::HardDeleted;
-                        $asset->hard_deleted_at = now();
-                        $asset->save();
+                        $deletionService->hardDelete($asset);
                         $success++;
                     } catch (Throwable $e) {
                         // Gagal hapus dari storage → jangan ubah DB, skip, lanjut record berikutnya.

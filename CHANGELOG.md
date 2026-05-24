@@ -20,7 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive architectural and usage documentation for GCS Assets Management System under `docs/features.md` (`CF-034`).
 - Custom premium visual Feature Card for Assets & GCS on Welcome page `resources/views/welcome.blade.php` (`CF-035`).
 - Mandatory rules and steps for updating the changelog added to `CONTRIBUTING.md` (`CF-036`).
+- Modal-based `EditAction` in both list view (table record actions) and detail view (header actions) in the Filament Back-Office Asset Resource to allow editing asset metadata (`category`, `retain_until`, `is_protected`) while dynamically hiding it when an asset is hard deleted.
 
+### Changed
+- Displayed `hard_deleted_at` timestamp in Filament Back-Office detail view infolist schema (`AssetInfolist`) under the Metadata & Audit section to show when an asset was hard deleted.
+- Resolved `status` badge visual inconsistency in Filament Back-Office detail view infolist schema by mapping status colors (`success`, `warning`, `danger`) to match the list table.
 
 ---
 

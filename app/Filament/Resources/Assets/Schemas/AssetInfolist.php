@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Assets\Schemas;
 
 use App\Models\Asset;
+use App\Support\Enums\AssetStatus;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -43,7 +44,14 @@ class AssetInfolist
                 ->schema([
                     TextEntry::make('storage_type')->label('Storage')->badge(),
                     TextEntry::make('path')->label('Path')->copyable(),
-                    TextEntry::make('status')->label('Status')->badge(),
+                    TextEntry::make('status')
+                        ->label('Status')
+                        ->badge()
+                        ->color(fn (Asset $record): string => match ($record->status) {
+                            AssetStatus::Active => 'success',
+                            AssetStatus::SoftDeleted => 'warning',
+                            AssetStatus::HardDeleted => 'danger',
+                        }),
                     TextEntry::make('is_protected')
                         ->label('Dilindungi')
                         ->formatStateUsing(fn (bool $state): string => $state ? 'Ya' : 'Tidak'),
@@ -58,6 +66,7 @@ class AssetInfolist
                     TextEntry::make('created_at')->label('Diupload')->dateTime(),
                     TextEntry::make('updated_at')->label('Diperbarui')->dateTime(),
                     TextEntry::make('deleted_at')->label('Dihapus (trash)')->dateTime()->placeholder('—'),
+                    TextEntry::make('hard_deleted_at')->label('Dihapus Permanen')->dateTime()->placeholder('—'),
                 ]),
         ]);
     }

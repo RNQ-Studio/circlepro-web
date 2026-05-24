@@ -22,6 +22,7 @@
 /public/hot
 /public/storage
 /storage/*.key
+/storage/app/gcs.json
 /storage/app/regions/**/*.json
 /storage/app/regions/**/*.gz
 /storage/app/regions/**/*.zip

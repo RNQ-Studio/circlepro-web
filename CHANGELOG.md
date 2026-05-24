@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Production Deployment Guide under `docs/deployment.md` (`CF-030`).
 - GitHub Contribution templates for Bug Reports, Feature Requests, and Pull Requests (`CF-032`).
 - Premium Dark Mode logo variation (`public/images/logo-dark.svg`) registered dynamically within Filament AdminPanelProvider (`CF-033`).
+- Comprehensive architectural and usage documentation for GCS Assets Management System under `docs/features.md` (`CF-034`).
+- Custom premium visual Feature Card for Assets & GCS on Welcome page `resources/views/welcome.blade.php` (`CF-035`).
+- Mandatory rules and steps for updating the changelog added to `CONTRIBUTING.md` (`CF-036`).
+
 
 ---
 

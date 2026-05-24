@@ -100,7 +100,10 @@ php artisan test
 ```
 
 > [!IMPORTANT]
-> Jika salah satu dari proses di atas gagal atau menghasilkan warna merah, **perbaiki kodenya terlebih dahulu**. Jangan pernah memaksa commit kode yang rusak ke repository.
+> **Pembaruan CHANGELOG.md Wajib**: Sebelum melakukan push, Anda **wajib** mencatat perubahan Anda pada berkas `CHANGELOG.md` di bawah bagian `## [Unreleased]`. Kelompokkan perubahan Anda ke kategori yang sesuai (`Added`, `Changed`, `Fixed`, dll.). Jika langkah ini terlewat, kontribusi Anda dapat ditolak pada saat proses code review.
+
+> [!CAUTION]
+> Jika salah satu dari proses di atas gagal atau menghasilkan warna merah pada pengujian otomatis, **perbaiki kodenya terlebih dahulu**. Jangan pernah memaksa commit kode yang rusak ke repository.
 
 ---
 
@@ -148,8 +151,11 @@ git checkout -b feature/add-email-verification
 # 3. Lakukan coding, lalu verifikasi Quality Gate (§3)
 vendor/bin/pint && vendor/bin/phpstan analyse && php artisan test
 
-# 4. Stage perubahan secara spesifik (hindari git add . secara membabi-buta)
-git add app/Http/Controllers/Auth/ app/Models/User.php
+# 3.5 Perbarui CHANGELOG.md pada bagian ## [Unreleased]
+# (Buka berkas CHANGELOG.md dan catat ringkasan kontribusi Anda di bawah kategori yang sesuai)
+
+# 4. Stage perubahan secara spesifik (jangan lupa sertakan berkas CHANGELOG.md!)
+git add app/Http/Controllers/Auth/ app/Models/User.php CHANGELOG.md
 
 # 5. Lakukan commit dengan pesan konvensional
 git commit -m "feat(auth): add email verification logic & controller"
@@ -170,6 +176,7 @@ Sebelum Anda meninggalkan sesi kerja atau menandai tugas selesai, pastikan Anda 
 
 - [ ] Seluruh **Quality Gate** sudah berjalan dengan hasil hijau bersih (Pint, Larastan, Test).
 - [ ] Riwayat commit dibuat secara **atomik** (kecil dan bertahap) dengan standar **Conventional Commits**.
+- [ ] Berkas `CHANGELOG.md` telah diperbarui di bawah bagian `## [Unreleased]` untuk mencatat semua kontribusi Anda.
 - [ ] Tidak ada file kredensial/rahasia (`.env`, file log, certificate) yang tidak sengaja ter-commit.
 - [ ] File `.env.example` telah diperbarui jika ada variabel environment baru yang ditambahkan.
 - [ ] Dokumentasi terkait (seperti berkas API atau README) telah diperbarui sesuai perubahan kode.

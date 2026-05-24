@@ -286,4 +286,58 @@ Untuk menjaga kualitas laporan dan kontribusi pengembang eksternal tetap terstru
 
 ---
 
+## 8. Sistem Manajemen Aset & Cloud Storage (GCS) Berkinerja Tinggi
+
+Untuk mendukung kebutuhan penyimpanan berkas modern berskala besar, sistem dilengkapi dengan infrastruktur manajemen aset kelas dunia yang berfokus pada keandalan transaksional (*atomic operations*), optimalisasi kueri, keamanan privasi, dan siklus hidup penyimpanan data terautomasi (*retention policy*).
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              Life-Cycle Aset (2-Phase)                                 │
+│                                                                                        │
+│   [ Upload ] ──► [ Active Status ] ──────────────────────────────────────────────┐     │
+│                         │                                                        │     │
+│                         ▼ (Masa Retensi Terlewati & is_protected = false)         │     │
+│                  [ Soft Deleted ]  ◄── (Artisan Scheduler: 01:00)                │     │
+│                         │                                                        │     │
+│                         ▼ (Masa Tenggang Kedaluwarsa Habis, default: 30 hari)    │     │
+│                  [ Hard Deleted ]  ◄── (Artisan Scheduler: 02:00)                │     │
+│                         │                                                        │     │
+│                         ▼                                                        │     │
+│                  (File fisik di GCS terhapus nyata, DB ditandai)                 │     │
+│                                                                                  │     │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 8.1 Arsitektur Database & Optimalisasi Indeks Parsial
+Skema tabel `assets` dirancang secara presisi menggunakan **PostgreSQL** dengan optimalisasi berikut:
+* **UUID sebagai Primary Key**: Berkas fisik yang disimpan di GCS diberi nama sesuai `id` UUID-nya. Ini bertindak sebagai penyamaran agar nama berkas di penyimpanan publik tidak dapat ditebak (*anti-enumeration attacks*) sekaligus menghindari bentrokan nama berkas.
+* **Indeks Parsial (Partial Indexes)**:
+  * `assets_expired_idx` (`WHERE status = 'active' AND retain_until IS NOT NULL`): Indeks sangat ramping yang hanya mengindeks berkas aktif dengan batas waktu retensi. Digunakan oleh scheduler soft-delete harian agar pencarian data kedaluwarsa berjalan dalam waktu mikrodetik walau tabel memiliki jutaan baris.
+  * `assets_pending_hard_delete_idx` (`WHERE status = 'soft_deleted'`): Mempercepat pencarian berkas berstatus soft-delete yang siap dihapus permanen.
+* **GIN Index untuk metadata JSONB**: Kolom `metadata` menggunakan tipe data `jsonb` dengan indeks GIN (`jsonb_path_ops`). Ini memungkinkan kueri pencarian data spesifik di dalam metadata berkas (seperti dimensi gambar atau jumlah halaman) berjalan dengan performa maksimal menggunakan operator penahanan (*containment* `@>`).
+
+### 8.2 Alur Unggah Terdistribusi & Transaksional Atomik
+Proses pengunggahan dikelola secara terpusat oleh `app/Services/AssetUploadService.php` dengan prinsip **All-or-Nothing (Atomic)**:
+1. **Penyimpanan GCS Terlebih Dahulu**: Berkas diunggah secara aman ke Google Cloud Storage pada disk `gcs` menggunakan pengorganisasian folder yang scalable: `{env}/{kategori}/{tahun}/{bulan}/{uuid}.{ekstensi}`.
+2. **Kompensasi Kegagalan (Rollback)**: Jika penyimpanan record ke basis data PostgreSQL mengalami kegagalan (misalnya karena gangguan koneksi DB), blok `catch` secara otomatis memicu pembersihan kompensasi dengan menghapus kembali berkas yang baru saja diunggah ke GCS. Ini menjamin **tidak ada berkas yatim piatu (*orphan files*)** yang memenuhi kuota penyimpanan cloud tanpa record di sistem.
+3. **Pemberian Nama Non-Injectable**: Kolom `id` (UUID) dan status keamanan disuntikkan langsung di tingkat Service, bukan melalui *mass-assignment* Eloquent, untuk mencegah manipulasi data dari sisi klien API.
+
+### 8.3 Ekstraksi Metadata Cerdas & Deduping
+Untuk menghemat pemrosesan di sisi server, starter project menyertakan **`AssetMetadataExtractor`** yang dapat mengekstrak properti berkas secara efisien tanpa memerlukan pustaka atau dependensi eksternal yang berat:
+* **Deteksi Dimensi Gambar**: Secara dinamis mengekstrak ukuran `width` dan `height` untuk semua jenis gambar yang didukung menggunakan fungsi bawaan berkinerja tinggi `getimagesize()`.
+* **Perhitungan Halaman PDF Heuristik**: Menggunakan analisis ekspresi reguler byte mentah (`preg_match_all`) untuk mencocokkan penanda objek tipe halaman PDF (`/Type\s*\/Page(?![s])`) secara cepat guna mengetahui total halaman dokumen tanpa merujuk ke server PDF eksternal.
+* **Deduping Checksum**: Menghasilkan hash SHA-256 untuk memverifikasi integritas berkas di tingkat aplikasi, mempermudah pelacakan berkas duplikat di masa mendatang.
+
+### 8.4 Sistem Siklus Hidup Data Terjadwal (Retention Policy)
+Proyek ini mengimplementasikan kepatuhan retensi data dengan mekanisme pembersihan terjadwal dua-fase pada berkas `routes/console.php`:
+* **Fase 1: Soft-Delete Harian (`assets:soft-delete-expired`)**:
+  Menjaring berkas berstatus aktif yang memiliki `retain_until` lampau (kedaluwarsa). Berkas kemudian ditandai sebagai `soft_deleted` dan secara dinamis dijadwalkan untuk dihapus permanen (default 30 hari ke depan). Berkas dengan status perlindungan hukum/bisnis (`is_protected = true`) dikecualikan secara penuh dari proses ini.
+* **Fase 2: Hard-Delete Harian (`assets:hard-delete-expired`)**:
+  Menghapus berkas fisik secara permanen dari Google Cloud Storage secara idempoten (jika berkas fisik sudah terhapus secara manual, proses akan melompati penghapusan tanpa melempar kesalahan) lalu mengubah status di database menjadi `hard_deleted` untuk keperluan audit.
+* **Proteksi Tumpang Tindih (`withoutOverlapping()`)**: 
+  Seluruh perintah pembersihan diproteksi dengan mekanisme penguncian agar eksekusi perintah berikutnya tidak berjalan bertindihan apabila proses penghapusan berkas fisik di GCS memakan waktu lebih lama dari jadwal harian.
+
+---
+
 Selamat berkolaborasi dan mengembangkan aplikasi hebat di atas fondasi kokoh Laravel Starter ini! Untuk panduan instalasi cepat dan cara menjalankan proyek, silakan merujuk langsung ke berkas utama [README.md](file:///c:/Users/62822/Documents/Work/laravel/laravel-starter/README.md). Jika Anda menemukan celah keamanan sensitif, harap membaca instruksi pelaporan privat di file [SECURITY.md](file:///c:/Users/62822/Documents/Work/laravel/laravel-starter/SECURITY.md).
+

@@ -19,6 +19,7 @@ Tujuannya adalah menyediakan kerangka kerja yang bersih, konsisten, dan siap dik
 | API Auth | Laravel Passport | `13.x` (OAuth2, Password Grant) |
 | Back-office UI | Filament | `5.x` |
 | RBAC | spatie/laravel-permission | `7.x` |
+| Cloud Storage | Google Cloud Storage (GCS) | Disk `gcs` terintegrasi |
 | Cache / Queue (opsional) | Redis | `7.x` |
 | Aset / Frontend | Node.js | `20.19+` atau `22.12+` (LTS direkomendasikan) |
 | PHP runtime lokal | Laravel Herd / Sail / Valet | sesuai OS |
@@ -216,6 +217,17 @@ php artisan queue:listen
 ./vendor/bin/sail artisan queue:listen
 ```
 
+#### 4. Kredensial & Driver Google Cloud Storage (GCS)
+Aset diunggah secara terdistribusi langsung ke GCS menggunakan disk `gcs`.
+1. Unduh berkas **Service Account JSON** yang memiliki akses read/write ke Google Cloud Storage bucket Anda.
+2. Simpan di direktori lokal Anda, misalnya di `storage/app/gcs/service-account.json`.
+3. Tambahkan konfigurasi berikut ke file `.env` Anda:
+   ```env
+   GOOGLE_CLOUD_PROJECT_ID=nama-project-gcp-anda
+   GOOGLE_CLOUD_KEY_FILE=storage/app/gcs/service-account.json
+   GOOGLE_CLOUD_STORAGE_BUCKET=nama-bucket-gcs-anda
+   ```
+
 ---
 
 ### 🌐 Database Wilayah Geografis Global (Opsional & Offline)
@@ -293,6 +305,8 @@ Untuk mempercepat integrasi dengan **Flutter Client**, berikut adalah ringkasan 
   * `GET /api/v1/notifications/unread-count` — Menghitung jumlah notifikasi yang belum dibaca.
   * `POST /api/v1/notifications/read-all` — Menandai seluruh notifikasi telah dibaca.
   * `POST /api/v1/notifications/{notification}/read` — Menandai satu notifikasi tertentu telah dibaca.
+* **Manajemen Aset & Berkas (Wajib Autentikasi)**
+  * `POST /api/v1/assets/upload` — Mengunggah berkas secara atomik ke Google Cloud Storage (GCS) lengkap dengan metadata & hash checksum.
 * **Data Master Kategori (Terproteksi Kebijakan RBAC)**
   * `GET /api/v1/categories` — List data master kategori (Mendukung whitelist filter & sort).
   * `POST /api/v1/categories` — Membuat kategori baru.

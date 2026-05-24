@@ -75,10 +75,17 @@ composer run setup
 # DB_USERNAME=<user>
 # DB_PASSWORD=<password>
 
-# Langkah 3: Jalankan migrasi, seeder default, dan kunci Passport
-# (Bagi pengguna Windows/non-make, jalankan manual atau: make fresh)
+# Langkah 3: Jalankan migrasi, seeder default, kunci Passport, & inisialisasi awal wajib
 php artisan migrate:fresh --seed
 php artisan passport:keys --force
+php artisan storage:link
+
+# Buat Passport Password Client (Salin Client ID & Client Secret ke file .env Anda!)
+php artisan passport:client --password
+
+# Unduh dan jalankan seeder wilayah administratif Indonesia offline
+php artisan regions:download
+php artisan db:seed --class=RegionSeeder
 
 # Langkah 4: Jalankan server dev lokal (Concurrently: serve, queue, logs, vite)
 # (Bagi pengguna Windows/non-make, gunakan ini. Untuk Linux/macOS dengan make: make dev)
@@ -111,7 +118,13 @@ cp .env.example .env
 # Langkah 5: Jalankan migrasi database & seeders
 ./vendor/bin/sail artisan migrate:fresh --seed
 
-# Langkah 6: Build aset frontend
+# Langkah 6: Jalankan inisialisasi awal wajib (Passport client, symlink, & wilayah offline)
+./vendor/bin/sail artisan storage:link
+./vendor/bin/sail artisan passport:client --password
+./vendor/bin/sail artisan regions:download
+./vendor/bin/sail artisan db:seed --class=RegionSeeder
+
+# Langkah 7: Build aset frontend
 ./vendor/bin/sail npm install
 ./vendor/bin/sail npm run build
 ```
@@ -169,7 +182,7 @@ Agar seluruh fitur premium seperti pengunggahan avatar dan pengiriman push notif
 
 #### 1. Kredensial Firebase Cloud Messaging (FCM)
 Aplikasi menggunakan **Firebase Admin SDK** untuk mengirim notifikasi ke Flutter client.
-1. Unduh berkas **Service Account JSON** dari Firebase Console Anda (Project Settings → Service Accounts → Generate New Private Key).
+1. Unduh berkas **Service Account JSON** dari [Firebase Console](https://console.firebase.google.com/) Anda (Project Settings → Service Accounts → Generate New Private Key).
 2. Simpan berkas JSON tersebut di direktori lokal Anda, misalnya di `storage/app/firebase/service-account.json`.
 3. Buka berkas `.env` lokal Anda, lalu daftarkan jalurnya pada variabel berikut:
    ```env
@@ -205,11 +218,12 @@ php artisan queue:listen
 
 ---
 
-### 🇮🇩 Database Wilayah Geografis Indonesia (Opsional & Offline)
+### 🌐 Database Wilayah Geografis Global (Opsional & Offline)
 
-Starter ini dilengkapi data administratif Indonesia (~245.000 data parent-child). Agar proses inisialisasi lokal Anda lancar dan tidak terhambat request HTTP eksternal yang lambat, seeding dilakukan secara **offline** menggunakan JSON fixtures lokal di storage.
-Jalankan perintah berikut untuk mengunduh berkas wilayah secara offline ke storage Anda sebelum melakukan seed region:
+Starter ini dilengkapi database wilayah geografis global mencakup seluruh negara di dunia (249.036 data parent-child). Agar proses inisialisasi lokal Anda lancar dan tidak terhambat request HTTP eksternal yang lambat, seeding dilakukan secara **offline** menggunakan JSON fixtures lokal di storage.
 
+#### Langkah 1: Unduh Berkas Wilayah secara Offline
+Jalankan perintah berikut untuk mengunduh berkas wilayah ke storage Anda:
 ```bash
 # Untuk Setup Lokal:
 php artisan regions:download
@@ -217,7 +231,25 @@ php artisan regions:download
 # Untuk Setup Docker Sail:
 ./vendor/bin/sail artisan regions:download
 ```
-*Untuk mengaktifkan seeder wilayah saat `make fresh`, ubah variabel di `.env` menjadi: `SEED_REGIONS=true`.*
+
+#### Langkah 2: Masukkan Data ke Database (Seeding)
+Pilihlah salah satu dari dua cara berikut untuk memasukkan data wilayah ke database:
+
+* **Opsi A: Jalankan Seeder Secara Langsung (Direkomendasikan)**
+  Jika Anda ingin langsung memasukkan data wilayah tanpa menghapus data tabel lainnya yang sudah ada:
+  ```bash
+  # Untuk Setup Lokal:
+  php artisan db:seed --class=RegionSeeder
+
+  # Untuk Setup Docker Sail:
+  ./vendor/bin/sail artisan db:seed --class=RegionSeeder
+  ```
+
+* **Opsi B: Aktifkan Pengisian Otomatis Saat Reset Database**
+  Jika Anda ingin data wilayah terisi otomatis setiap kali menjalankan `php artisan migrate:fresh --seed`, atur variabel berikut di berkas `.env` Anda:
+  ```env
+  SEED_REGIONS=true
+  ```
 
 ---
 

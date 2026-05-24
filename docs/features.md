@@ -163,8 +163,8 @@ Sebagai contoh acuan pengembang baru (*reference template*), modul `Category` di
   * **Whitelist Sorting**: Pengurutan data yang aman (mis. `sort=-name` untuk desending).
   * **Searching**: Dukungan pencarian teks parsial secara instan.
 
-### 3.2 Database Geografis Indonesia Master (`Region`)
-Starter project ini menyertakan skema basis data wilayah administratif Indonesia terlengkap (~245.000 data rekursif dari Provinsi hingga Kelurahan/Desa) dengan struktur hirarki *self-referencing parent-child*:
+### 3.2 Database Wilayah Geografis Global Master (`Region`)
+Starter project ini menyertakan skema basis data wilayah administratif global dan seluruh negara di dunia (249.036 data rekursif parent-child) dengan struktur hirarki *self-referencing parent-child*:
 * **Seeder Wilayah Offline**:
   > [!IMPORTANT]
   > Guna menghindari kegagalan proses seeding di lingkungan CI/CD terisolasi akibat gangguan koneksi server pihak ketiga, seeding wilayah dikonfigurasi untuk membaca dari berkas **JSON Fixtures lokal** di storage.

@@ -57,14 +57,15 @@ Jika Anda baru saja melakukan *clone* pada project ini, ikuti langkah-langkah di
 
 ---
 
-### Opsi A: Instalasi Menggunakan Tooling Lokal (Makefile / Composer)
+### Opsi A: Instalasi Menggunakan Tooling Lokal (Composer / Makefile)
 
 > **Prasyarat**: Anda wajib memiliki **PHP 8.3+**, **Composer 2**, **PostgreSQL 14+**, dan **Node 20+** terpasang di sistem operasi lokal Anda.
 > *Catatan Windows*: Jika PATH default Anda masih menggunakan PHP lama, Anda dapat mengarahkan path php secara manual atau menggunakan binary PHP 8.3 spesifik (mis. `C:\php8.3.6\php.exe`).
 
 ```bash
 # Langkah 1: Jalankan setup otomatis dependensi & aset
-make setup
+# (Bagi pengguna Windows/non-make, gunakan ini. Untuk Linux/macOS dengan make: make setup)
+composer run setup
 
 # Langkah 2: Buat database di PostgreSQL lokal Anda
 # (Isi kredensial PostgreSQL di berkas .env Anda terlebih dahulu)
@@ -74,10 +75,13 @@ make setup
 # DB_PASSWORD=<password>
 
 # Langkah 3: Jalankan migrasi, seeder default, dan kunci Passport
-make fresh
+# (Bagi pengguna Windows/non-make, jalankan manual atau: make fresh)
+php artisan migrate:fresh --seed
+php artisan passport:keys --force
 
 # Langkah 4: Jalankan server dev lokal (Concurrently: serve, queue, logs, vite)
-make dev
+# (Bagi pengguna Windows/non-make, gunakan ini. Untuk Linux/macOS dengan make: make dev)
+composer run dev
 ```
 
 ---
@@ -255,16 +259,16 @@ Untuk mempercepat integrasi dengan **Flutter Client**, berikut adalah ringkasan 
 * **Menjalankan Tes & Linting**:
   ```bash
   # Menjalankan seluruh test suite
-  make test
+  composer test            # alternatif: make test
 
   # Menjalankan formater koding otomatis (Pint)
-  make lint
+  composer lint            # alternatif: make lint
 
   # Menjalankan static analysis (PHPStan/Larastan)
-  make analyse
+  composer analyse         # alternatif: make analyse
 
   # Menjalankan quality gate penuh sebelum melakukan git push
-  make quality
+  make quality             # alternatif: composer lint && composer analyse && composer test
   ```
 
 > [!TIP]

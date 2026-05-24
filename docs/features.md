@@ -254,19 +254,18 @@ Developer tidak perlu melakukan instalasi manual PHP, database, atau redis di si
   * Redis sebagai driver cache & antrean (*queue*)
   * Mailpit sebagai server penguji pengiriman email lokal
 
-### 7.2 Makefile Shortcuts
-Untuk mempercepat operasional terminal, starter ini dilengkapi dengan berkas `Makefile` dengan shortcut sederhana:
+### 7.2 Alur Perintah Universal (Composer / Makefile)
+Untuk memudahkan operasional di semua sistem operasi (termasuk Windows, macOS, dan Linux), starter ini dilengkapi dengan perintah berbasis **Composer** sebagai perintah utama, serta **Makefile** sebagai jalan pintas opsional:
 
-| Perintah Makefile | Perintah Asli di Balik Layar | Fungsi Utama |
+| Pintasan Makefile | Perintah Utama (Universal) | Fungsi Utama |
 |---|---|---|
-| `make setup` | `composer install && npm install` | Melakukan inisialisasi dependensi pertama kali |
-| `make dev` | `./vendor/bin/sail up -d` | Menyalakan seluruh kontainer docker secara latar belakang |
-| `make stop` | `./vendor/bin/sail stop` | Mematikan kontainer docker lokal yang sedang berjalan |
-| `make test` | `./vendor/bin/sail artisan test` | Menjalankan seluruh pengujian unit dan fitur |
-| `make lint` | `./vendor/bin/sail pint` | Memformat gaya penulisan kode sesuai aturan PSR-12 secara otomatis |
-| `make analyse` | `./vendor/bin/sail phpstan analyse` | Menjalankan analisis statis tipe data kode (Larastan) |
-| `make fresh` | `./vendor/bin/sail artisan migrate:fresh --seed` | Menyegarkan database dan mengisi ulang data awal developer |
-| `make quality` | `make lint && make analyse && make test` | Melakukan audit kualitas kode lengkap sebelum melakukan push ke repositori |
+| `make setup` | `composer run setup` | Melakukan instalasi paket, menyalin `.env`, key-gen, migrasi, dan build aset |
+| `make dev` | `composer run dev` | Menjalankan server dev, antrean queue, log pail, dan vite secara paralel |
+| `make test` | `composer test` | Menjalankan seluruh pengujian unit dan fitur (PHPUnit) |
+| `make lint` | `composer lint` | Memformat gaya penulisan kode sesuai aturan PSR-12 secara otomatis (Pint) |
+| `make analyse` | `composer analyse` | Menjalankan analisis statis kode tingkat ketat (PHPStan/Larastan) |
+| `make fresh` | `php artisan migrate:fresh --seed` | Menyegarkan database lokal dan mengisi ulang data awal (seeder) |
+| `make quality` | `composer lint && composer analyse && composer test` | Melakukan audit kualitas kode lengkap (linting + analisis + testing) |
 
 ### 7.3 Infrastruktur Testing & Fallback Dinamis
 * **Cakupan Tes Tinggi**: Pengujian otomatis mencakup Feature Tests dan Unit Tests dengan tingkat *coverage* Filament Back-Office mencapai **~85%** dan Services Layer diuji secara terisolasi murni dengan melatih *Mocking* dependencies FCM dan SMS.

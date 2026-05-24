@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->darkMode(false)
             ->login()
             ->brandName('Laravel Starter')
             ->brandLogo(asset('images/logo-light.svg'))

@@ -5,6 +5,7 @@ namespace Tests\Feature\BackOffice;
 use App\Filament\Resources\AppVersions\AppVersionResource;
 use App\Models\AppVersion;
 use App\Models\User;
+use App\Support\Enums\DevicePlatform;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,7 +25,7 @@ class AppVersionManagementTest extends TestCase
     {
         $admin = $this->userWithRole('admin');
         AppVersion::factory()->create([
-            'platform' => \App\Support\Enums\DevicePlatform::Android,
+            'platform' => DevicePlatform::Android,
             'min_version' => '1.0.0',
             'latest_version' => '1.1.0',
         ]);

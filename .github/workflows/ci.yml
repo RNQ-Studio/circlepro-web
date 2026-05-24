@@ -86,6 +86,9 @@ jobs:
       - name: Generate Application Key
         run: php artisan key:generate --env=testing
 
+      - name: Generate Passport Keys
+        run: php artisan passport:keys --env=testing
+
       - name: Run Tests
         env:
           DB_CONNECTION: pgsql

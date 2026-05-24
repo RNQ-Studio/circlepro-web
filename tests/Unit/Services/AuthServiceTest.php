@@ -3,13 +3,14 @@
 namespace Tests\Unit\Services;
 
 use App\Models\User;
+use App\Models\UserDevice;
 use App\Services\Auth\AuthService;
-use App\Support\Enums\DevicePlatform;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\AccessToken;
 use Laravel\Passport\ClientRepository;
+use Laravel\Passport\RefreshToken;
 use Laravel\Passport\Token;
 use Mockery;
 use Tests\TestCase;
@@ -197,8 +198,8 @@ class AuthServiceTest extends TestCase
         $this->assertSame(2, Token::query()->where('user_id', $this->user->id)->where('revoked', true)->count());
 
         // Assert ALL refresh tokens are revoked
-        $this->assertSame(0, \Laravel\Passport\RefreshToken::query()->where('revoked', false)->count());
-        $this->assertSame(2, \Laravel\Passport\RefreshToken::query()->where('revoked', true)->count());
+        $this->assertSame(0, RefreshToken::query()->where('revoked', false)->count());
+        $this->assertSame(2, RefreshToken::query()->where('revoked', true)->count());
 
         // Assert ALL device push tokens are nullified
         $this->assertDatabaseHas('user_devices', [
@@ -255,7 +256,7 @@ class AuthServiceTest extends TestCase
         ];
 
         // Create the device record first to ensure it exists
-        \App\Models\UserDevice::create([
+        UserDevice::create([
             'user_id' => $this->user->id,
             'device_id' => 'concurrent-device-xyz',
             'platform' => 'android',

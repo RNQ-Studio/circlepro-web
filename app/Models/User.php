@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
 use Spatie\Activitylog\LogOptions;
@@ -36,7 +37,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAuthenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable, LogsActivity;
+    use HasApiTokens, HasFactory, HasRoles, LogsActivity, Notifiable;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -106,14 +107,15 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAu
      */
     public function validateForPassportPasswordGrant(#[\SensitiveParameter] string $password): bool
     {
-        $cacheKey = 'otp_login_token_' . $this->getKey();
+        $cacheKey = 'otp_login_token_'.$this->getKey();
         $cachedToken = cache($cacheKey);
 
         if ($cachedToken !== null && hash_equals($cachedToken, $password)) {
             cache()->forget($cacheKey);
+
             return true;
         }
 
-        return \Illuminate\Support\Facades\Hash::check($password, $this->password);
+        return Hash::check($password, $this->password);
     }
 }

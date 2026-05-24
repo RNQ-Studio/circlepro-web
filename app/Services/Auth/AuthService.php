@@ -53,10 +53,10 @@ class AuthService
      */
     public function issueTokenForUser(User $user): array
     {
-        $tempToken = 'otp_token_' . Str::random(40);
+        $tempToken = 'otp_token_'.Str::random(40);
 
         // Store in cache for 30 seconds
-        cache()->put('otp_login_token_' . $user->getKey(), $tempToken, 30);
+        cache()->put('otp_login_token_'.$user->getKey(), $tempToken, 30);
 
         return $this->issueToken([
             'grant_type' => 'password',

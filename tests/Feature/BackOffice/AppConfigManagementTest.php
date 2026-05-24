@@ -5,6 +5,7 @@ namespace Tests\Feature\BackOffice;
 use App\Filament\Resources\AppConfigs\AppConfigResource;
 use App\Models\AppConfig;
 use App\Models\User;
+use App\Support\Enums\AppConfigType;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -26,7 +27,7 @@ class AppConfigManagementTest extends TestCase
         AppConfig::factory()->create([
             'key' => 'site_name',
             'value' => 'Laravel Starter',
-            'type' => \App\Support\Enums\AppConfigType::String,
+            'type' => AppConfigType::String,
         ]);
 
         $this->actingAs($admin)

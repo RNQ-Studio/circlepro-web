@@ -13,10 +13,6 @@ class ApiResponse
 {
     /**
      * @param  AnonymousResourceCollection|AbstractPaginator|JsonResource|array|mixed  $data
-     * @param  string  $message
-     * @param  int  $status
-     * @param  array  $meta
-     * @return JsonResponse
      */
     public static function success(
         mixed $data = null,

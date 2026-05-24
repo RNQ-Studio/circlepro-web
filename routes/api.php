@@ -38,7 +38,6 @@ Route::prefix('v1')->group(function (): void {
             return ApiResponse::success(['token' => $token], 'Password reset token received.');
         })->name('password.reset')->middleware(['check.maintenance']);
 
-
         Route::get('email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
             ->name('verification.verify')
             ->middleware(['check.maintenance']);

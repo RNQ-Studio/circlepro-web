@@ -14,7 +14,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 class Category extends Model
 {
     /** @use HasFactory<CategoryFactory> */
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {

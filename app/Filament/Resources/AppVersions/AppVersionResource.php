@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AppVersions;
 
 use App\Filament\Resources\AppVersions\Pages\ListAppVersions;
 use App\Models\AppVersion;
+use App\Support\Enums\DevicePlatform;
 use BackedEnum;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -66,7 +67,7 @@ class AppVersionResource extends Resource
             ->columns([
                 TextColumn::make('platform')
                     ->badge()
-                    ->color(fn (string $state): string => $state === 'android' ? 'success' : 'info'),
+                    ->color(fn (DevicePlatform $state): string => $state->value === 'android' ? 'success' : 'info'),
                 TextColumn::make('min_version')->label('Min Version'),
                 TextColumn::make('latest_version')->label('Latest Version'),
                 IconColumn::make('force_update')->boolean(),

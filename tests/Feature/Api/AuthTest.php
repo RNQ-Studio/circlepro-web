@@ -187,4 +187,68 @@ class AuthTest extends TestCase
                 'code' => 'UNAUTHENTICATED',
             ]);
     }
+
+    public function test_logout_all_revokes_all_tokens_and_push_tokens(): void
+    {
+        // 1. Generate two logins (tokens) for the user
+        $tokens1 = $this->postJson('/api/v1/auth/login', [
+            'email' => 'tester@example.com',
+            'password' => 'password',
+            'device_id' => 'device-1',
+            'platform' => 'android',
+            'push_token' => 'push-token-1',
+        ])->json('data');
+
+        $tokens2 = $this->postJson('/api/v1/auth/login', [
+            'email' => 'tester@example.com',
+            'password' => 'password',
+            'device_id' => 'device-2',
+            'platform' => 'ios',
+            'push_token' => 'push-token-2',
+        ])->json('data');
+
+        $this->assertDatabaseHas('oauth_access_tokens', [
+            'user_id' => $this->user->getKey(),
+            'revoked' => false,
+        ]);
+
+        // 2. Perform logout-all using the first token
+        $this->withToken($tokens1['access_token'])
+            ->postJson('/api/v1/auth/logout-all')
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'message' => 'Logged out from all devices',
+            ]);
+
+        // Clear in-memory cached authentication guards for subsequent request in same test process
+        $this->app['auth']->forgetGuards();
+
+        // Assert BOTH tokens are revoked in the database
+        $this->assertDatabaseMissing('oauth_access_tokens', [
+            'user_id' => $this->user->getKey(),
+            'revoked' => false,
+        ]);
+
+        // Assert push tokens are nullified for all devices
+        $this->assertDatabaseHas('user_devices', [
+            'user_id' => $this->user->getKey(),
+            'device_id' => 'device-1',
+            'push_token' => null,
+        ]);
+        $this->assertDatabaseHas('user_devices', [
+            'user_id' => $this->user->getKey(),
+            'device_id' => 'device-2',
+            'push_token' => null,
+        ]);
+
+        // Assert both tokens are unauthorized to access me endpoint
+        $this->withToken($tokens1['access_token'])
+            ->getJson('/api/v1/auth/me')
+            ->assertUnauthorized();
+
+        $this->withToken($tokens2['access_token'])
+            ->getJson('/api/v1/auth/me')
+            ->assertUnauthorized();
+    }
 }

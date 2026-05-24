@@ -28,7 +28,8 @@ class PushNotificationServiceTest extends TestCase
         parent::setUp();
 
         $this->fcmMock = Mockery::mock(FcmDriverInterface::class);
-        $this->pushNotificationService = new PushNotificationService($this->fcmMock);
+        $this->app->instance(FcmDriverInterface::class, $this->fcmMock);
+        $this->pushNotificationService = $this->app->make(PushNotificationService::class);
 
         $this->user = User::factory()->create();
     }

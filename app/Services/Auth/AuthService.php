@@ -6,7 +6,10 @@ use App\Models\User;
 use App\Models\UserDevice;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
 use Laravel\Passport\RefreshToken;
 
@@ -41,22 +44,25 @@ class AuthService
     }
 
     /**
-     * Issue a Personal Access Token for a user after OTP verification.
-     * Unlike the Password Grant, this does not produce a refresh token.
+     * Issue a refreshable Password Grant token for a user after OTP verification
+     * by utilizing a secure single-use login token.
      *
-     * @return array{access_token: string, refresh_token: null, token_type: string, expires_in: int}
+     * @return array{access_token: string, refresh_token: string, token_type: string, expires_in: int}
+     *
+     * @throws AuthenticationException
      */
     public function issueTokenForUser(User $user): array
     {
-        $result = $user->createToken('otp-login');
-        $expiresAt = $result->token->expires_at ?? now()->addHours(8);
+        $tempToken = 'otp_token_' . Str::random(40);
 
-        return [
-            'access_token' => $result->accessToken,
-            'refresh_token' => null,
-            'token_type' => 'Bearer',
-            'expires_in' => (int) now()->diffInSeconds($expiresAt),
-        ];
+        // Store in cache for 30 seconds
+        cache()->put('otp_login_token_' . $user->getKey(), $tempToken, 30);
+
+        return $this->issueToken([
+            'grant_type' => 'password',
+            'username' => $user->email,
+            'password' => $tempToken,
+        ]);
     }
 
     /**
@@ -100,24 +106,63 @@ class AuthService
     }
 
     /**
+     * Revoke all access tokens, refresh tokens, and nullify all push tokens for the user.
+     */
+    public function logoutAllDevices(User $user): void
+    {
+        DB::transaction(function () use ($user) {
+            $tokenIds = $user->tokens()->pluck('id');
+
+            if ($tokenIds->isNotEmpty()) {
+                RefreshToken::query()
+                    ->whereIn('access_token_id', $tokenIds)
+                    ->update(['revoked' => true]);
+
+                $user->tokens()->update(['revoked' => true]);
+            }
+
+            UserDevice::query()
+                ->where('user_id', $user->getKey())
+                ->update(['push_token' => null]);
+        });
+    }
+
+    /**
      * @param  array{device_id: string, platform: string, os_version?: string|null, app_version?: string|null, device_name?: string|null, push_token?: string|null}  $deviceInfo
      */
     private function upsertDevice(User $user, array $deviceInfo): void
     {
-        UserDevice::query()->updateOrCreate(
-            [
-                'user_id' => $user->getKey(),
-                'device_id' => $deviceInfo['device_id'],
-            ],
-            [
-                'platform' => $deviceInfo['platform'],
-                'os_version' => $deviceInfo['os_version'] ?? null,
-                'app_version' => $deviceInfo['app_version'] ?? null,
-                'device_name' => $deviceInfo['device_name'] ?? null,
-                'push_token' => $deviceInfo['push_token'] ?? null,
-                'last_active_at' => now(),
-            ]
-        );
+        DB::transaction(function () use ($user, $deviceInfo) {
+            try {
+                UserDevice::query()->updateOrCreate(
+                    [
+                        'user_id' => $user->getKey(),
+                        'device_id' => $deviceInfo['device_id'],
+                    ],
+                    [
+                        'platform' => $deviceInfo['platform'],
+                        'os_version' => $deviceInfo['os_version'] ?? null,
+                        'app_version' => $deviceInfo['app_version'] ?? null,
+                        'device_name' => $deviceInfo['device_name'] ?? null,
+                        'push_token' => $deviceInfo['push_token'] ?? null,
+                        'last_active_at' => now(),
+                    ]
+                );
+            } catch (UniqueConstraintViolationException $e) {
+                UserDevice::query()
+                    ->where('user_id', $user->getKey())
+                    ->where('device_id', $deviceInfo['device_id'])
+                    ->update([
+                        'platform' => $deviceInfo['platform'],
+                        'os_version' => $deviceInfo['os_version'] ?? null,
+                        'app_version' => $deviceInfo['app_version'] ?? null,
+                        'device_name' => $deviceInfo['device_name'] ?? null,
+                        'push_token' => $deviceInfo['push_token'] ?? null,
+                        'last_active_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+            }
+        });
     }
 
     /**

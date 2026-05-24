@@ -23,9 +23,9 @@
 Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diidentifikasi total **34 temuan** yang mencakup aspek keamanan, testing, DX, dokumentasi, fitur API, Filament back-office, dan DevOps. Dari total temuan:
 
 - **11 item (CF-001 s/d CF-011)** — ✅ Selesai (Sprint 0 & CF-011)
-- **3 item (CF-012 s/d CF-015)** — 🔥 Kritis (wajib sebelum produksi - CF-012 & CF-013 selesai)
-- **9 item (CF-016 s/d CF-024)** — ⚠️ Sprint 1 (1-2 minggu)
-- **10 item (CF-025 s/d CF-034)** — 💡 Sprint 2 (2-4 minggu)
+- **4 item (CF-012 s/d CF-015)** — ✅ Selesai (Kritis)
+- **9 item (CF-016 s/d CF-024)** — ✅ Selesai (Sprint 1)
+- **10 item (CF-025 s/d CF-034)** — ✅ Selesai (Sprint 2)
 
 ---
 
@@ -336,7 +336,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-018] Tidak Ada Endpoint "Logout All Devices"
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** ⚠️ Penting
 - **Estimasi Effort:** S (2 jam)
 - **Sumber:** `docs/review/06_priority_areas.md` §1.2 Masalah 4, `docs/review/07_action_plan.md` §B.10
@@ -344,17 +344,17 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 - **Masalah:**
   Logout hanya me-revoke token yang sedang digunakan. User yang kehilangan device tidak bisa invalidasi semua session sekaligus.
 - **Aksi yang harus dilakukan:**
-  - [ ] Tambahkan method `logoutAllDevices(User $user)` di `AuthService` — revoke all access tokens, refresh tokens, dan nullify semua push tokens.
-  - [ ] Tambahkan endpoint `POST /api/v1/auth/logout-all` di route API.
-  - [ ] Tambahkan method `logoutAll()` di `AuthController`.
-  - [ ] Buat feature test untuk memverifikasi bahwa semua token di-revoke.
+  - [x] Tambahkan method `logoutAllDevices(User $user)` di `AuthService` — revoke all access tokens, refresh tokens, dan nullify semua push tokens.
+  - [x] Tambahkan endpoint `POST /api/v1/auth/logout-all` di route API.
+  - [x] Tambahkan method `logoutAll()` di `AuthController`.
+  - [x] Buat feature test untuk memverifikasi bahwa semua token di-revoke.
 - **Kriteria selesai:** Endpoint `/api/v1/auth/logout-all` tersedia dan berhasil me-revoke semua token milik user.
 
 ---
 
 ### [CF-019] Buat File SECURITY.md
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** ⚠️ Penting
 - **Estimasi Effort:** S (30 menit)
 - **Sumber:** `docs/review/04_documentation_completeness.md` §D.3, `docs/review/07_action_plan.md` §B.8
@@ -362,15 +362,15 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 - **Masalah:**
   Tidak ada file kebijakan pelaporan kerentanan keamanan. Best practice open source mengharuskan adanya `SECURITY.md`.
 - **Aksi yang harus dilakukan:**
-  - [ ] Buat `SECURITY.md` di root directory.
-  - [ ] Tambahkan section: Supported Versions, Reporting a Vulnerability, Response Timeline, Known Security Considerations (Passport keys, rate limiting, HTTPS enforcement).
+  - [x] Buat `SECURITY.md` di root directory.
+  - [x] Tambahkan section: Supported Versions, Reporting a Vulnerability, Response Timeline, Known Security Considerations (Passport keys, rate limiting, HTTPS enforcement).
 - **Kriteria selesai:** File `SECURITY.md` tersedia dengan panduan pelaporan vulnerability yang jelas.
 
 ---
 
 ### [CF-020] Buat ERD Diagram Database
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** ⚠️ Penting
 - **Estimasi Effort:** S (2 jam)
 - **Sumber:** `docs/review/04_documentation_completeness.md` §D.2, `docs/review/07_action_plan.md` §B.9
@@ -378,17 +378,17 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 - **Masalah:**
   Relasi antar tabel hanya bisa dipahami dari model docblock dan migration. Tidak ada visualisasi ERD.
 - **Aksi yang harus dilakukan:**
-  - [ ] Buat folder `docs/erd/`.
-  - [ ] Buat `docs/erd/database_erd.md` dengan Mermaid ERD diagram.
-  - [ ] Dokumentasikan relasi: users→user_devices (1:N), users→notifications (1:N), users↔roles (M:N), categories (standalone, soft-delete), regions (self-referential), dll.
-  - [ ] Tambahkan keterangan kolom per tabel.
+  - [x] Buat folder `docs/erd/`.
+  - [x] Buat `docs/erd/database_erd.md` dengan Mermaid ERD diagram.
+  - [x] Dokumentasikan relasi: users→user_devices (1:N), users→notifications (1:N), users↔roles (M:N), categories (standalone, soft-delete), regions (self-referential), dll.
+  - [x] Tambahkan keterangan kolom per tabel.
 - **Kriteria selesai:** ERD diagram visual tersedia di `docs/erd/database_erd.md` dan dapat dirender oleh Markdown viewer.
 
 ---
 
 ### [CF-021] Race Condition pada Device Upsert di AuthService
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** ⚠️ Penting
 - **Estimasi Effort:** S (1 jam)
 - **Sumber:** `docs/review/06_priority_areas.md` §1.2 Masalah 3
@@ -396,16 +396,16 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 - **Masalah:**
   `UserDevice::query()->updateOrCreate(...)` tanpa DB transaction. Login concurrent dari device yang sama bisa menyebabkan duplicate insert sebelum unique constraint check.
 - **Aksi yang harus dilakukan:**
-  - [ ] Bungkus `upsertDevice()` dalam `DB::transaction()`.
-  - [ ] Atau gunakan database-level unique constraint pada `(user_id, device_id)` dan handle `UniqueConstraintViolationException` secara graceful.
-  - [ ] Tambahkan unit test untuk skenario concurrent upsert.
+  - [x] Bungkus `upsertDevice()` dalam `DB::transaction()`.
+  - [x] Atau gunakan database-level unique constraint pada `(user_id, device_id)` dan handle `UniqueConstraintViolationException` secara graceful.
+  - [x] Tambahkan unit test untuk skenario concurrent upsert.
 - **Kriteria selesai:** Device upsert aman terhadap race condition tanpa duplicate records.
 
 ---
 
 ### [CF-022] OTP Login Tidak Punya Refresh Token (Inkonsistensi UX)
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** ⚠️ Penting
 - **Estimasi Effort:** M (4-6 jam)
 - **Sumber:** `docs/review/06_priority_areas.md` §1.2 Masalah 2
@@ -413,16 +413,16 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 - **Masalah:**
   `issueTokenForUser()` menggunakan Personal Access Token yang tidak mendukung refresh. User OTP login harus re-login setiap 8 jam — inkonsistensi dengan password login yang mendapat refresh token 30 hari.
 - **Aksi yang harus dilakukan:**
-  - [ ] Evaluasi opsi: (a) Redesign OTP login agar menggunakan Password Grant/custom grant, ATAU (b) Tambahkan mekanisme auto-extend untuk Personal Access Token.
-  - [ ] Implementasikan solusi yang dipilih.
-  - [ ] Update test `OtpTest.php` untuk memvalidasi token refresh behavior.
+  - [x] Evaluasi opsi: (a) Redesign OTP login agar menggunakan Password Grant/custom grant, ATAU (b) Tambahkan mekanisme auto-extend untuk Personal Access Token.
+  - [x] Implementasikan solusi yang dipilih.
+  - [x] Update test `OtpTest.php` untuk memvalidasi token refresh behavior.
 - **Kriteria selesai:** User yang login via OTP mendapatkan pengalaman token refresh yang konsisten dengan login password.
 
 ---
 
 ### [CF-023] Type Hint `$data` di ApiResponse::success() Kurang Strict
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** ⚠️ Penting
 - **Estimasi Effort:** S (30 menit)
 - **Sumber:** `docs/review/06_priority_areas.md` §3.2 Masalah 1
@@ -430,16 +430,16 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 - **Masalah:**
   Parameter `$data = null` tanpa type hint. PHPStan level tinggi mungkin tidak menangkap tipe yang salah.
 - **Aksi yang harus dilakukan:**
-  - [ ] Tambahkan union type hint: `mixed $data = null` atau lebih spesifik: `AnonymousResourceCollection|AbstractPaginator|JsonResource|array|null $data = null`.
-  - [ ] Tambahkan PHPDoc `@param` annotation jika menggunakan union type yang kompleks.
-  - [ ] Jalankan `composer analyse` untuk memastikan tidak ada regresi.
+  - [x] Tambahkan union type hint: `mixed $data = null` atau lebih spesifik: `AnonymousResourceCollection|AbstractPaginator|JsonResource|array|null $data = null`.
+  - [x] Tambahkan PHPDoc `@param` annotation jika menggunakan union type yang kompleks.
+  - [x] Jalankan `composer analyse` untuk memastikan tidak ada regresi.
 - **Kriteria selesai:** `ApiResponse::success()` memiliki type hint yang eksplisit dan PHPStan clean.
 
 ---
 
 ### [CF-024] Publish config/cors.php Secara Eksplisit
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** ⚠️ Penting
 - **Estimasi Effort:** S (1 jam)
 - **Sumber:** `docs/review/01_starter_readiness.md` §C, `docs/review/07_action_plan.md` §C.5
@@ -447,9 +447,9 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 - **Masalah:**
   Tidak ada file `config/cors.php` yang di-publish. Laravel memiliki default CORS, tetapi untuk starter project seharusnya ada konfigurasi eksplisit — terutama jika ada rencana web client selain mobile.
 - **Aksi yang harus dilakukan:**
-  - [ ] Publish CORS config: `php artisan config:publish cors` (atau `vendor:publish --tag=cors`).
-  - [ ] Review dan dokumentasikan konfigurasi yang direkomendasikan.
-  - [ ] Tambahkan komentar penjelas di file cors.php.
+  - [x] Publish CORS config: `php artisan config:publish cors` (atau `vendor:publish --tag=cors`).
+  - [x] Review dan dokumentasikan konfigurasi yang direkomendasikan.
+  - [x] Tambahkan komentar penjelas di file cors.php.
 - **Kriteria selesai:** File `config/cors.php` tersedia secara eksplisit dengan konfigurasi yang terdokumentasi.
 
 ---
@@ -460,7 +460,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-025] Tambahkan GitHub Actions CI Pipeline
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** S (2-3 jam)
 - **Sumber:** `docs/review/06_priority_areas.md` §5.3, `docs/review/07_action_plan.md` §C.1
@@ -477,7 +477,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-026] Tambahkan spatie/laravel-activitylog untuk Audit Trail
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** M (4-6 jam)
 - **Sumber:** `docs/review/05_feature_completeness.md` §E & §F, `docs/review/07_action_plan.md` §C.2
@@ -496,7 +496,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-027] Buat API Error Code Enum (ApiErrorCode)
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** S (2 jam)
 - **Sumber:** `docs/review/06_priority_areas.md` §3.2 Masalah 2, `docs/review/07_action_plan.md` §C.3
@@ -514,7 +514,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-028] Tambahkan Filament Test untuk Semua Resource
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** M (6-8 jam)
 - **Sumber:** `docs/review/03_best_practice.md` §E, `docs/review/07_action_plan.md` §C.4
@@ -532,7 +532,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-029] Tambahkan Makefile sebagai Shortcut Developer
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** S (1 jam)
 - **Sumber:** `docs/review/01_starter_readiness.md` §A, `docs/review/07_action_plan.md` §C.6
@@ -547,7 +547,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-030] Buat Panduan Deployment Production (docs/deployment.md)
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** M (3-4 jam)
 - **Sumber:** `docs/review/04_documentation_completeness.md` §D.4, `docs/review/07_action_plan.md` §C.7
@@ -562,7 +562,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-031] Dispatch Push Notification via Queue Job
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** S (2-3 jam)
 - **Sumber:** `docs/review/03_best_practice.md` §F, `docs/review/07_action_plan.md` §C.8
@@ -580,7 +580,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-032] Tambahkan GitHub Templates (Issue & PR)
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** S (1 jam)
 - **Sumber:** `docs/review/04_documentation_completeness.md` §B, `docs/review/07_action_plan.md` §C.9
@@ -597,7 +597,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-033] Tambahkan Dark Mode Logo Variant di Filament
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** S (30 menit)
 - **Sumber:** `docs/review/06_priority_areas.md` §4.2 Masalah 2
@@ -613,7 +613,7 @@ Berdasarkan hasil tinjauan mendalam terhadap Laravel Starter Project, telah diid
 
 ### [CF-034] Buat CHANGELOG.md (Keep a Changelog Format)
 
-- **Status:** `[ ]` Belum dikerjakan
+- **Status:** `[x]` Selesai
 - **Prioritas:** 💡 Enhancement
 - **Estimasi Effort:** S (1 jam)
 - **Sumber:** `docs/review/04_documentation_completeness.md` §D.8
@@ -651,40 +651,40 @@ Daftar cepat untuk tracking progress:
 - [x] CF-014 — Filament RBAC Per-Resource
 - [x] CF-015 — Unit Test Service Layer
 
-### ⚠️ Sprint 1 — Perbaikan Penting (2/9)
+### ⚠️ Sprint 1 — Perbaikan Penting (9/9)
 - [x] CF-016 — Endpoint User Registration API
 - [x] CF-017 — Endpoint Password Reset API
-- [ ] CF-018 — Endpoint Logout All Devices
-- [ ] CF-019 — Buat SECURITY.md
-- [ ] CF-020 — ERD Diagram Database
-- [ ] CF-021 — Race Condition Device Upsert
-- [ ] CF-022 — OTP Login Refresh Token
-- [ ] CF-023 — Type Hint ApiResponse
-- [ ] CF-024 — Publish config/cors.php
+- [x] CF-018 — Endpoint Logout All Devices
+- [x] CF-019 — Buat SECURITY.md
+- [x] CF-020 — ERD Diagram Database
+- [x] CF-021 — Race Condition Device Upsert
+- [x] CF-022 — OTP Login Refresh Token
+- [x] CF-023 — Type Hint ApiResponse
+- [x] CF-024 — Publish config/cors.php
 
-### 💡 Sprint 2 — Peningkatan (0/10)
-- [ ] CF-025 — GitHub Actions CI Pipeline
-- [ ] CF-026 — Activity Log (spatie/laravel-activitylog)
-- [ ] CF-027 — API Error Code Enum
-- [ ] CF-028 — Filament Test Coverage
-- [ ] CF-029 — Makefile Shortcut
-- [ ] CF-030 — Deployment Guide
-- [ ] CF-031 — Push Notification via Queue
-- [ ] CF-032 — GitHub Templates (Issue & PR)
-- [ ] CF-033 — Dark Mode Logo Filament
-- [ ] CF-034 — CHANGELOG.md
+### 💡 Sprint 2 — Peningkatan (10/10)
+- [x] CF-025 — GitHub Actions CI Pipeline
+- [x] CF-026 — Activity Log (spatie/laravel-activitylog)
+- [x] CF-027 — API Error Code Enum
+- [x] CF-028 — Filament Test Coverage
+- [x] CF-029 — Makefile Shortcut
+- [x] CF-030 — Deployment Guide
+- [x] CF-031 — Push Notification via Queue
+- [x] CF-032 — GitHub Templates (Issue & PR)
+- [x] CF-033 — Dark Mode Logo Filament
+- [x] CF-034 — CHANGELOG.md
 
 ---
 
 ## Estimasi Total Effort
 
-| Fase | Item | Effort | Timeline |
-|------|------|--------|----------|
-| ✅ Sprint 0 (selesai) | 10 task | ~30 jam | Selesai |
-| 🔥 Kritis | 5 task | ~15-20 jam | 2-3 hari |
-| ⚠️ Sprint 1 | 9 task | ~20-30 jam | 1-2 minggu |
-| 💡 Sprint 2 | 10 task | ~25-35 jam | 2-4 minggu |
-| **TOTAL tersisa** | **24 task** | **~60-85 jam** | **~3-5 minggu** |
+| Fase | Item | Effort | Timeline | Status |
+|------|------|--------|----------|--------|
+| ✅ Sprint 0 | 10 task | ~30 jam | Selesai | ✅ Selesai |
+| 🔥 Kritis | 5 task | ~15-20 jam | 2-3 hari | ✅ Selesai |
+| ⚠️ Sprint 1 | 9 task | ~20-30 jam | 1-2 minggu | ✅ Selesai |
+| 💡 Sprint 2 | 10 task | ~25-35 jam | 2-4 minggu | ✅ Selesai |
+| **TOTAL tersisa** | **0 task** | **0 jam** | **-** | **🎉 LULUS** |
 
 > **Catatan:** Estimasi di atas **TIDAK** termasuk implementasi multi-tenancy. Jika multi-tenancy dibutuhkan, tambahkan ~40-60 jam dan 2-3 minggu tambahan.
 
@@ -705,26 +705,16 @@ Daftar cepat untuk tracking progress:
 
 ## Catatan Riwayat Eksekusi (Footer Note)
 
-*Terakhir dijalankan/diperbarui pada:* `2026-05-24 18:44:00`
+*Terakhir dijalankan/diperbarui pada:* `2026-05-24 20:56:23`
 *Daftar task yang di-generate/diperbarui pada eksekusi terakhir:*
-- **[CF-001 s/d CF-014]** — Dipertahankan (status: selesai) ✅
-- **[CF-015]** — 🔥 Unit Test Service Layer *(selesai)* ✅
-- **[CF-016]** — ⚠️ Endpoint User Registration *(selesai)* ✅
-- **[CF-017]** — ⚠️ Endpoint Password Reset *(selesai)* ✅
-- **[CF-018]** — ⚠️ Endpoint Logout All Devices *(belum dikerjakan)*
-- **[CF-019]** — ⚠️ Buat SECURITY.md *(belum dikerjakan)*
-- **[CF-020]** — ⚠️ ERD Diagram Database *(belum dikerjakan)*
-- **[CF-021]** — ⚠️ Race Condition Device Upsert *(belum dikerjakan)*
-- **[CF-022]** — ⚠️ OTP Login Refresh Token *(belum dikerjakan)*
-- **[CF-023]** — ⚠️ Type Hint ApiResponse *(belum dikerjakan)*
-- **[CF-024]** — ⚠️ Publish config/cors.php *(belum dikerjakan)*
-- **[CF-025]** — 💡 GitHub Actions CI *(belum dikerjakan)*
-- **[CF-026]** — 💡 Activity Log *(belum dikerjakan)*
-- **[CF-027]** — 💡 API Error Code Enum *(belum dikerjakan)*
-- **[CF-028]** — 💡 Filament Test Coverage *(belum dikerjakan)*
-- **[CF-029]** — 💡 Makefile *(belum dikerjakan)*
-- **[CF-030]** — 💡 Deployment Guide *(belum dikerjakan)*
-- **[CF-031]** — 💡 Push Notification Queue *(belum dikerjakan)*
-- **[CF-032]** — 💡 GitHub Templates *(belum dikerjakan)*
-- **[CF-033]** — 💡 Dark Mode Logo *(belum dikerjakan)*
-- **[CF-034]** — 💡 CHANGELOG.md *(belum dikerjakan)*
+- **[CF-001 s/d CF-024]** — Dipertahankan (status: selesai) ✅
+- **[CF-025]** — 💡 GitHub Actions CI *(selesai)* ✅
+- **[CF-026]** — 💡 Activity Log *(selesai)* ✅
+- **[CF-027]** — 💡 API Error Code Enum *(selesai)* ✅
+- **[CF-028]** — 💡 Filament Test Coverage *(selesai)* ✅
+- **[CF-029]** — 💡 Makefile *(selesai)* ✅
+- **[CF-030]** — 💡 Deployment Guide *(selesai)* ✅
+- **[CF-031]** — 💡 Push Notification Queue *(selesai)* ✅
+- **[CF-032]** — 💡 GitHub Templates *(selesai)* ✅
+- **[CF-033]** — 💡 Dark Mode Logo *(selesai)* ✅
+- **[CF-034]** — 💡 CHANGELOG.md *(selesai)* ✅

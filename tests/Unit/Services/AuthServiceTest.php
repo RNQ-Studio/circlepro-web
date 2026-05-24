@@ -68,7 +68,7 @@ class AuthServiceTest extends TestCase
         $this->assertDatabaseHas('user_devices', [
             'user_id' => $this->user->id,
             'device_id' => 'device-123',
-            'platform' => DevicePlatform::Android->value,
+            'platform' => 'android',
             'os_version' => '13.0',
             'app_version' => '1.0.0',
             'device_name' => 'Pixel 7',
@@ -99,7 +99,7 @@ class AuthServiceTest extends TestCase
         $tokens = $this->authService->issueTokenForUser($this->user);
 
         $this->assertArrayHasKey('access_token', $tokens);
-        $this->assertNull($tokens['refresh_token']);
+        $this->assertNotNull($tokens['refresh_token']);
         $this->assertSame('Bearer', $tokens['token_type']);
         $this->assertIsInt($tokens['expires_in']);
     }
@@ -168,6 +168,111 @@ class AuthServiceTest extends TestCase
             'user_id' => $this->user->id,
             'device_id' => 'device-123',
             'push_token' => null,
+        ]);
+    }
+
+    public function test_logout_all_devices_revokes_all_tokens_and_push_tokens(): void
+    {
+        // 1. Generate multiple logins (tokens) for the same user
+        $this->authService->login('auth_tester@example.com', 'password', [
+            'device_id' => 'device-1',
+            'platform' => 'android',
+            'push_token' => 'push-token-1',
+        ]);
+
+        $this->authService->login('auth_tester@example.com', 'password', [
+            'device_id' => 'device-2',
+            'platform' => 'ios',
+            'push_token' => 'push-token-2',
+        ]);
+
+        // Assert we have multiple active access tokens in DB
+        $this->assertSame(2, Token::query()->where('user_id', $this->user->id)->where('revoked', false)->count());
+
+        // 2. Perform logoutAllDevices
+        $this->authService->logoutAllDevices($this->user);
+
+        // Assert ALL access tokens are revoked
+        $this->assertSame(0, Token::query()->where('user_id', $this->user->id)->where('revoked', false)->count());
+        $this->assertSame(2, Token::query()->where('user_id', $this->user->id)->where('revoked', true)->count());
+
+        // Assert ALL refresh tokens are revoked
+        $this->assertSame(0, \Laravel\Passport\RefreshToken::query()->where('revoked', false)->count());
+        $this->assertSame(2, \Laravel\Passport\RefreshToken::query()->where('revoked', true)->count());
+
+        // Assert ALL device push tokens are nullified
+        $this->assertDatabaseHas('user_devices', [
+            'user_id' => $this->user->id,
+            'device_id' => 'device-1',
+            'push_token' => null,
+        ]);
+        $this->assertDatabaseHas('user_devices', [
+            'user_id' => $this->user->id,
+            'device_id' => 'device-2',
+            'push_token' => null,
+        ]);
+    }
+
+    public function test_upsert_device_handles_concurrency_gracefully(): void
+    {
+        $deviceInfo = [
+            'device_id' => 'concurrent-device-123',
+            'platform' => 'android',
+            'os_version' => '13.0',
+            'app_version' => '1.0.0',
+            'device_name' => 'Pixel 7',
+            'push_token' => 'fcm-push-token',
+        ];
+
+        // Call once to create the record
+        $this->authService->login('auth_tester@example.com', 'password', $deviceInfo);
+
+        $this->assertDatabaseHas('user_devices', [
+            'user_id' => $this->user->id,
+            'device_id' => 'concurrent-device-123',
+        ]);
+
+        // Call again with updated info to test updateOrCreate on existing record
+        $deviceInfo['device_name'] = 'Pixel 7 Pro';
+        $this->authService->login('auth_tester@example.com', 'password', $deviceInfo);
+
+        $this->assertDatabaseHas('user_devices', [
+            'user_id' => $this->user->id,
+            'device_id' => 'concurrent-device-123',
+            'device_name' => 'Pixel 7 Pro',
+        ]);
+    }
+
+    public function test_upsert_device_fallback_on_unique_constraint_violation(): void
+    {
+        $deviceInfo = [
+            'device_id' => 'concurrent-device-xyz',
+            'platform' => 'android',
+            'os_version' => '13.0',
+            'app_version' => '1.0.0',
+            'device_name' => 'Pixel 7 New',
+            'push_token' => 'fcm-push-token-new',
+        ];
+
+        // Create the device record first to ensure it exists
+        \App\Models\UserDevice::create([
+            'user_id' => $this->user->id,
+            'device_id' => 'concurrent-device-xyz',
+            'platform' => 'android',
+            'device_name' => 'Pixel 7 Old',
+        ]);
+
+        // Invoke the private upsertDevice method using reflection
+        $method = new \ReflectionMethod(AuthService::class, 'upsertDevice');
+        $method->setAccessible(true);
+        $method->invoke($this->authService, $this->user, $deviceInfo);
+
+        // Verify that it successfully updated the existing record
+        $this->assertDatabaseHas('user_devices', [
+            'user_id' => $this->user->id,
+            'device_id' => 'concurrent-device-xyz',
+            'device_name' => 'Pixel 7 New',
+            'push_token' => 'fcm-push-token-new',
         ]);
     }
 

@@ -16,6 +16,8 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -34,7 +36,15 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAuthenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     /**
      * Send the email verification notification.
@@ -79,5 +89,31 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAu
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Find the user instance for the given username.
+     */
+    public function findForPassport(string $username): ?User
+    {
+        return $this->where('email', $username)
+            ->orWhere('phone', $username)
+            ->first();
+    }
+
+    /**
+     * Validate the password for the Passport password grant.
+     */
+    public function validateForPassportPasswordGrant(#[\SensitiveParameter] string $password): bool
+    {
+        $cacheKey = 'otp_login_token_' . $this->getKey();
+        $cachedToken = cache($cacheKey);
+
+        if ($cachedToken !== null && hash_equals($cachedToken, $password)) {
+            cache()->forget($cacheKey);
+            return true;
+        }
+
+        return \Illuminate\Support\Facades\Hash::check($password, $this->password);
     }
 }

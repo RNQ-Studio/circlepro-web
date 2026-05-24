@@ -53,6 +53,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('avatar', [AuthController::class, 'uploadAvatar']);
             Route::post('change-password', [AuthController::class, 'changePassword']);
             Route::post('logout', [AuthController::class, 'logout']);
+            Route::post('logout-all', [AuthController::class, 'logoutAll']);
             Route::post('phone', [OtpController::class, 'updatePhone']);
             Route::post('phone/verify', [OtpController::class, 'verifyPhone']);
         });

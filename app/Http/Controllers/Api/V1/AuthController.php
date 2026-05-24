@@ -143,4 +143,14 @@ class AuthController extends Controller
 
         return ApiResponse::success(null, 'Logged out');
     }
+
+    public function logoutAll(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $this->authService->logoutAllDevices($user);
+
+        return ApiResponse::success(null, 'Logged out from all devices');
+    }
 }

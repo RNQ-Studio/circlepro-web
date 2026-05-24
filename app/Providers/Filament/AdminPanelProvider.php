@@ -30,6 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->brandName('Laravel Starter')
             ->brandLogo(asset('images/logo-light.svg'))
+            ->darkModeBrandLogo(asset('images/logo-dark.svg'))
             ->brandLogoHeight('2.5rem')
             ->favicon(asset('favicon.ico'))
             ->colors([

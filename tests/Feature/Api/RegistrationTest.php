@@ -101,7 +101,7 @@ class RegistrationTest extends TestCase
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
             'device_id' => 'my-unique-device-id',
-            'platform' => DevicePlatform::Android->value,
+            'platform' => 'android',
             'os_version' => '13.0',
             'app_version' => '1.0.0',
             'device_name' => 'Pixel 7',
@@ -117,7 +117,7 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseHas('user_devices', [
             'user_id' => $user->id,
             'device_id' => 'my-unique-device-id',
-            'platform' => DevicePlatform::Android->value,
+            'platform' => 'android',
             'os_version' => '13.0',
             'app_version' => '1.0.0',
             'device_name' => 'Pixel 7',

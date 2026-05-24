@@ -197,7 +197,7 @@ class OtpTest extends TestCase
             'code' => $plainCode,
             'purpose' => 'login',
         ])->assertOk()
-            ->assertJsonStructure(['data' => ['access_token', 'token_type', 'expires_in']]);
+            ->assertJsonStructure(['data' => ['access_token', 'refresh_token', 'token_type', 'expires_in']]);
     }
 
     // ── Phone update & verify ─────────────────────────────────────────────────

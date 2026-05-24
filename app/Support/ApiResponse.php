@@ -2,15 +2,24 @@
 
 namespace App\Support;
 
+use App\Support\Enums\ApiErrorCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Pagination\AbstractPaginator;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ApiResponse
 {
+    /**
+     * @param  AnonymousResourceCollection|AbstractPaginator|JsonResource|array|mixed  $data
+     * @param  string  $message
+     * @param  int  $status
+     * @param  array  $meta
+     * @return JsonResponse
+     */
     public static function success(
-        $data = null,
+        mixed $data = null,
         string $message = 'OK',
         int $status = 200,
         array $meta = []
@@ -42,7 +51,7 @@ class ApiResponse
         string $message,
         int $status = 400,
         array $errors = [],
-        ?string $code = null
+        ApiErrorCode|string|null $code = null
     ): JsonResponse {
         $payload = [
             'success' => false,
@@ -50,7 +59,7 @@ class ApiResponse
         ];
 
         if ($code !== null) {
-            $payload['code'] = $code;
+            $payload['code'] = $code instanceof ApiErrorCode ? $code->value : $code;
         }
 
         if (! empty($errors)) {

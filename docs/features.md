@@ -259,7 +259,7 @@ Untuk memudahkan operasional di semua sistem operasi (termasuk Windows, macOS, d
 
 | Pintasan Makefile | Perintah Utama (Universal) | Fungsi Utama |
 |---|---|---|
-| `make setup` | `composer run setup` | Melakukan instalasi paket, menyalin `.env`, key-gen, migrasi, dan build aset |
+| `make setup` | `composer run setup` | Melakukan instalasi paket, menyalin `.env`, key-gen, dan build aset |
 | `make dev` | `composer run dev` | Menjalankan server dev, antrean queue, log pail, dan vite secara paralel |
 | `make test` | `composer test` | Menjalankan seluruh pengujian unit dan fitur (PHPUnit) |
 | `make lint` | `composer lint` | Memformat gaya penulisan kode sesuai aturan PSR-12 secara otomatis (Pint) |

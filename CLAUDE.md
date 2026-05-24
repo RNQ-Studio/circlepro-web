@@ -30,7 +30,7 @@ This file serves as a quick entrypoint and guide for AI Coding Agents (such as C
 - **Run Static Analysis (Larastan)**: `composer analyse` or `vendor/bin/phpstan analyse --memory-limit=1G`
 
 ### Setup & Migrations
-- **Project Setup**: `composer run setup` (runs install, env copy, key generation, migrations, npm build)
+- **Project Setup**: `composer run setup` (runs install, env copy, key generation, npm build)
 - **Run Migrations & Seed**: `php artisan migrate --seed`
 - **Generate Passport Keys & Client**:
   ```bash

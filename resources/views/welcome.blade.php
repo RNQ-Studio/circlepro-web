@@ -274,7 +274,7 @@
         <div class="mx-auto max-w-6xl px-6 lg:px-8">
             <div class="mb-16 text-center">
                 <span class="mb-4 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-600">Memulai Cepat</span>
-                <h2 class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">Siap dalam 5 Menit</h2>
+                <h2 class="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">Siap dalam 12 Menit</h2>
                 <p class="mx-auto mt-4 max-w-2xl text-lg text-gray-500">Clone repository, jalankan empat perintah berikut, dan langsung mulai develop.</p>
             </div>
 

@@ -313,18 +313,5 @@ vendor/bin/phpunit
 > 3. **Tests Pass:** Seluruh pengujian (Feature & Unit) berwarna hijau (`OK / 100% passed`).
 > 4. **Clear Configuration Cache:** Pastikan Anda telah menjalankan `php artisan config:clear` agar variabel lingkungan pengujian di `.env.testing` atau `phpunit.xml` dibaca secara dinamis dan tidak macet di cache konfigurasi.
 
----
-
-## Status Proyek
-
-✅ **Sesi 1 selesai** — fondasi: Laravel 13 + PostgreSQL, struktur direktori, API Response standard, tooling (Pint/Larastan), migrasi awal, seeder, endpoint `GET /api/v1/health`.
-
-✅ **Sesi 2 selesai** — Auth: Passport (Password Grant) untuk API + login session Filament `/admin`, RBAC (spatie) dengan role `super-admin`/`admin`/`staff` & `super-admin` bypass. Endpoint login/refresh/logout/me.
-
-✅ **Sesi 3 selesai** — User & Role management: CRUD user/role di Filament, assign role/permission, policy RBAC, endpoint profil API (`PUT /auth/me`, `POST /auth/change-password`), dan test otorisasi.
-
-✅ **Sesi 4 selesai** — Data Master CRUD generik: API + back-office `Category`, filter/sort/pagination, policy RBAC, dokumentasi pola data master, dan test.
-
-✅ **Sesi 5 selesai** — Polish & Finalisasi: Branding back-office premium, pembersihan dokumentasi usang, standardisasi quality gate, linter, dan penerbitan katalog fitur lengkap di [docs/features.md](docs/features.md).
-
-> Catatan dev lokal: untuk produksi gunakan user PostgreSQL khusus least-privilege (bukan `postgres` superuser).
+> [!TIP]
+> **Catatan Keamanan Produksi:** Untuk lingkungan production, sangat direkomendasikan menggunakan pengguna PostgreSQL khusus dengan hak akses terbatas (*least-privilege*), bukan akun administrator database default `postgres`.

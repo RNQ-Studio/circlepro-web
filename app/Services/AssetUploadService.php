@@ -28,7 +28,6 @@ class AssetUploadService
     public function upload(
         UploadedFile $file,
         string $morphableType,
-        int $morphableId,
         ?int $userId = null,
         ?Carbon $retainUntil = null,
         bool $isProtected = false,
@@ -63,8 +62,6 @@ class AssetUploadService
         try {
             $asset = new Asset([
                 'user_id' => $userId,
-                'morphable_type' => $morphableType,
-                'morphable_id' => $morphableId,
                 'storage_type' => StorageType::Gcs,
                 'path' => $path,
                 'url' => $disk->url($path),

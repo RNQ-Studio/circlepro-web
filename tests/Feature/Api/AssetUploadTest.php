@@ -63,8 +63,7 @@ class AssetUploadTest extends TestCase
             'id' => $assetId,
             'storage_type' => 'gcs',
             'status' => 'active',
-            'morphable_type' => 'user',
-            'morphable_id' => 1,
+            'category' => 'user',
         ]);
 
         // Metadata image diekstrak otomatis.

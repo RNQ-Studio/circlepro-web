@@ -25,8 +25,6 @@ class AssetFactory extends Factory
         return [
             'id' => $uuid,
             'user_id' => null,
-            'morphable_type' => 'user',
-            'morphable_id' => 1,
             'storage_type' => StorageType::Gcs,
             'path' => "production/user/2026/05/{$uuid}.jpg",
             'url' => "https://storage.googleapis.com/bucket/production/user/2026/05/{$uuid}.jpg",

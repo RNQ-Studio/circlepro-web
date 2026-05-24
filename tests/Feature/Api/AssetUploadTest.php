@@ -1,0 +1,141 @@
+<?php
+
+namespace Tests\Feature\Api;
+
+use App\Models\Asset;
+use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Storage;
+use Laravel\Passport\ClientRepository;
+use Tests\TestCase;
+
+class AssetUploadTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private string $accessToken;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('gcs');
+
+        $client = app(ClientRepository::class)->createPasswordGrantClient('Test Password Grant', 'users', true);
+        config([
+            'passport.password_client.id' => $client->id,
+            'passport.password_client.secret' => $client->plainSecret,
+        ]);
+
+        $this->withoutMiddleware(ThrottleRequests::class);
+        $this->seed(RolePermissionSeeder::class);
+
+        User::factory()->create(['email' => 'uploader@example.com']);
+
+        $this->accessToken = $this->postJson('/api/v1/auth/login', [
+            'email' => 'uploader@example.com',
+            'password' => 'password',
+        ])->json('data.access_token');
+    }
+
+    public function test_user_can_upload_image_to_gcs(): void
+    {
+        $file = UploadedFile::fake()->image('photo.jpg', 800, 600);
+
+        $response = $this->withToken($this->accessToken)
+            ->postJson('/api/v1/assets/upload', [
+                'file' => $file,
+                'morphable_type' => 'user',
+                'morphable_id' => 1,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => ['id', 'original_filename', 'mime_type', 'size', 'public_url', 'status', 'retain_until', 'metadata', 'created_at'],
+            ]);
+
+        $assetId = $response->json('data.id');
+
+        $this->assertDatabaseHas('assets', [
+            'id' => $assetId,
+            'storage_type' => 'gcs',
+            'status' => 'active',
+            'morphable_type' => 'user',
+            'morphable_id' => 1,
+        ]);
+
+        // Metadata image diekstrak otomatis.
+        $this->assertSame(800, $response->json('data.metadata.width'));
+        $this->assertSame(600, $response->json('data.metadata.height'));
+
+        // File benar-benar tersimpan di disk gcs (faked).
+        $path = Asset::find($assetId)->path;
+        Storage::disk('gcs')->assertExists($path);
+    }
+
+    public function test_retain_until_null_marks_asset_permanent(): void
+    {
+        $file = UploadedFile::fake()->image('permanent.png');
+
+        $response = $this->withToken($this->accessToken)
+            ->postJson('/api/v1/assets/upload', [
+                'file' => $file,
+                'morphable_type' => 'user',
+                'morphable_id' => 1,
+            ])
+            ->assertCreated();
+
+        $this->assertNull($response->json('data.retain_until'));
+    }
+
+    public function test_upload_requires_authentication(): void
+    {
+        $file = UploadedFile::fake()->image('photo.jpg');
+
+        $this->postJson('/api/v1/assets/upload', [
+            'file' => $file,
+            'morphable_type' => 'user',
+            'morphable_id' => 1,
+        ])->assertUnauthorized();
+    }
+
+    public function test_upload_validates_required_fields(): void
+    {
+        $this->withToken($this->accessToken)
+            ->postJson('/api/v1/assets/upload', [])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['file', 'morphable_type', 'morphable_id']);
+    }
+
+    public function test_upload_rejects_oversized_file(): void
+    {
+        // 60MB > 50MB limit
+        $file = UploadedFile::fake()->create('big.pdf', 60 * 1024, 'application/pdf');
+
+        $this->withToken($this->accessToken)
+            ->postJson('/api/v1/assets/upload', [
+                'file' => $file,
+                'morphable_type' => 'user',
+                'morphable_id' => 1,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['file']);
+    }
+
+    public function test_upload_rejects_disallowed_mime_type(): void
+    {
+        $file = UploadedFile::fake()->create('malware.exe', 10, 'application/x-msdownload');
+
+        $this->withToken($this->accessToken)
+            ->postJson('/api/v1/assets/upload', [
+                'file' => $file,
+                'morphable_type' => 'user',
+                'morphable_id' => 1,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['file']);
+    }
+}

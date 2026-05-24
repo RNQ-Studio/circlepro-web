@@ -1,0 +1,108 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Asset;
+use App\Support\Enums\AssetStatus;
+use App\Support\Enums\StorageType;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use RuntimeException;
+use Throwable;
+
+class AssetUploadService
+{
+    private const DISK = 'gcs';
+
+    public function __construct(
+        private readonly AssetMetadataExtractor $metadataExtractor,
+    ) {}
+
+    /**
+     * Upload file langsung ke GCS lalu simpan record asset.
+     * Atomic: bila upload GCS gagal, tidak ada record DB yang dibuat;
+     * bila penyimpanan DB gagal setelah upload, file GCS yang sudah terupload dihapus kembali.
+     */
+    public function upload(
+        UploadedFile $file,
+        string $morphableType,
+        int $morphableId,
+        ?int $userId = null,
+        ?Carbon $retainUntil = null,
+        bool $isProtected = false,
+    ): Asset {
+        // UUID dipakai sekaligus sebagai PK asset dan nama file di GCS (tidak bisa ditebak).
+        $uuid = (string) Str::uuid();
+        $extension = $file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'bin';
+
+        // Path scalable: {env}/{morphable_type}/{year}/{month}/{uuid}.{ext}
+        $folder = sprintf(
+            '%s/%s/%s/%s',
+            config('app.env', 'production'),
+            Str::slug($morphableType),
+            now()->format('Y'),
+            now()->format('m'),
+        );
+        $filename = $uuid.'.'.$extension;
+        $path = $folder.'/'.$filename;
+
+        // Ekstrak metadata SEBELUM upload — setelah store(), file sementara sudah dipindah.
+        $metadata = $this->metadataExtractor->extract($file);
+
+        $disk = Storage::disk(self::DISK);
+
+        // Disk 'gcs' dikonfigurasi 'throw' => true, jadi kegagalan upload melempar exception
+        // (tertangkap handler global) dan kita tidak pernah sampai membuat record DB.
+        $stored = $disk->putFileAs($folder, $file, $filename);
+        if ($stored === false) {
+            throw new RuntimeException('Failed to upload file to Google Cloud Storage.');
+        }
+
+        try {
+            $asset = new Asset([
+                'user_id' => $userId,
+                'morphable_type' => $morphableType,
+                'morphable_id' => $morphableId,
+                'storage_type' => StorageType::Gcs,
+                'path' => $path,
+                'url' => $disk->url($path),
+                'original_filename' => $file->getClientOriginalName(),
+                'extension' => $extension,
+                'mime_type' => $file->getMimeType() ?? $file->getClientMimeType(),
+                'size' => $file->getSize() ?: 0,
+                'checksum' => $this->checksum($file),
+                'category' => Str::slug($morphableType),
+                'metadata' => $metadata,
+                'retain_until' => $retainUntil,
+                'is_protected' => $isProtected,
+            ]);
+
+            // id & status di-set langsung (bukan via mass-assignment) agar id deterministik
+            // sama dengan nama file di storage, dan status tidak pernah bisa di-inject klien.
+            $asset->id = $uuid;
+            $asset->status = AssetStatus::Active;
+            $asset->save();
+
+            return $asset;
+        } catch (Throwable $e) {
+            // Kompensasi: bersihkan file yatim di GCS agar tidak ada orphan tanpa record.
+            $disk->delete($path);
+
+            throw $e;
+        }
+    }
+
+    private function checksum(UploadedFile $file): ?string
+    {
+        $path = $file->getRealPath();
+        if ($path === false) {
+            return null;
+        }
+
+        $hash = @hash_file('sha256', $path);
+
+        return $hash === false ? null : $hash;
+    }
+}

@@ -60,6 +60,19 @@ return [
             'report' => false,
         ],
 
+        // Google Cloud Storage — driver disediakan oleh package spatie/laravel-google-cloud-storage.
+        // 'throw' => true agar kegagalan upload/delete melempar exception (dipakai untuk jaminan atomicity).
+        'gcs' => [
+            'driver' => 'gcs',
+            'project_id' => env('GOOGLE_CLOUD_PROJECT_ID'),
+            'key_file_path' => env('GOOGLE_CLOUD_KEY_FILE'),       // path ke service account JSON
+            'bucket' => env('GOOGLE_CLOUD_STORAGE_BUCKET'),
+            'path_prefix' => env('GOOGLE_CLOUD_STORAGE_PATH_PREFIX', ''),
+            'storage_api_uri' => env('GOOGLE_CLOUD_STORAGE_API_URI'),
+            'visibility' => 'public',
+            'throw' => true,
+        ],
+
     ],
 
     /*

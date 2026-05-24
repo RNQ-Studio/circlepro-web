@@ -4,11 +4,13 @@ namespace App\Models;
 
 use App\Support\Enums\AssetStatus;
 use App\Support\Enums\StorageType;
+use Database\Factories\AssetFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +18,8 @@ use Illuminate\Support\Facades\Storage;
 /**
  * @property string $id
  * @property int|null $user_id
+ * @property string|null $morphable_type
+ * @property int|null $morphable_id
  * @property StorageType $storage_type
  * @property string $path
  * @property string|null $url
@@ -38,10 +42,13 @@ use Illuminate\Support\Facades\Storage;
  */
 class Asset extends Model
 {
+    /** @use HasFactory<AssetFactory> */
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'user_id',
+        'morphable_type',
+        'morphable_id',
         'storage_type',
         'path',
         'url',
@@ -77,6 +84,13 @@ class Asset extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /** Entitas pemilik file (polymorphic) — bisa User, Transaction, dll. */
+    /** @return MorphTo<Model, $this> */
+    public function morphable(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     // ── Query Scopes ───────────────────────────────────────────────────

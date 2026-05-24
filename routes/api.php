@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AppController;
+use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
@@ -59,6 +60,8 @@ Route::prefix('v1')->group(function (): void {
     });
 
     Route::middleware(['auth:api', 'check.maintenance'])->group(function (): void {
+        Route::post('assets/upload', [AssetController::class, 'upload'])->middleware('throttle:30,1');
+
         Route::apiResource('categories', CategoryController::class);
 
         Route::prefix('notifications')->group(function (): void {

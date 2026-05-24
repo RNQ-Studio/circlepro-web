@@ -45,7 +45,6 @@ Tujuannya adalah menyediakan kerangka kerja yang bersih, konsisten, dan siap dik
 | [docs/architecture.md](docs/architecture.md) | Arsitektur sistem, layering, struktur direktori, strategi auth, dan praktik integrasi Flutter ↔ Laravel |
 | [docs/data_master_pattern.md](docs/data_master_pattern.md) | Pola standar dan petunjuk replikasi CRUD data master baru berdasarkan contoh `Category` |
 | [docs/deployment.md](docs/deployment.md) | Panduan go-live produksi lengkap (Nginx block, Supervisor worker, dan migrasi) |
-| [docs/erd/database_erd.md](docs/erd/database_erd.md) | Visualisasi skema database interaktif (Mermaid ERD) dan kamus data (*data dictionary*) |
 | [CLAUDE.md](CLAUDE.md) | Panduan perintah cepat (linting, test, static analysis) untuk AI agent dan kolaborator |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Aturan kontribusi repositori, manajemen Git Flow, konvensi Conventional Commits, dan quality gate |
 | [SECURITY.md](SECURITY.md) | Kebijakan pelaporan privat celah keamanan sensitif beserta SLA respons |

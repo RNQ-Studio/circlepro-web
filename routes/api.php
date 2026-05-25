@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OtpController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
+use App\Http\Controllers\Api\V1\QuoteController;
 use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -69,6 +70,8 @@ Route::prefix('v1')->group(function (): void {
             Route::post('phone/verify', [OtpController::class, 'verifyPhone']);
         });
     });
+
+    Route::apiResource('quotes', QuoteController::class);
 
     Route::middleware(['auth:api', 'check.maintenance'])->group(function (): void {
         Route::post('assets/upload', [AssetController::class, 'upload'])->middleware('throttle:30,1');

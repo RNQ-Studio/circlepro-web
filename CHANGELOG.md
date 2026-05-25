@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Quotes Management API under the `api/v1` prefix: public (no auth required) full CRUD plus combined search (`filter[search]` across text and author via a `scopeSearch` ILIKE scope), field filters, sorting, and pagination.
+- Filament back-office resource for Quotes (modular `Schemas`/`Tables`/`Pages` structure under the `Data Master` navigation group), accessible by `admin` and `staff` roles.
+- Automated feature tests for the Quotes API (guest access, search/filter/sort/pagination, full CRUD cycle) and back-office page smoke tests.
 - Comprehensive step-by-step tutorials detailing best practices for adding a new API to the project, using a "Quotes" CRUD & search use case, covering migrations, models, factories, RBAC policies, Filament integration, and testing (stored under `docs/tutorial/`, `docs/tutorial_claude_opus/`, and `docs/tutorial_claude_opus4.7/`).
 - Excel Import and Export APIs (`GET /api/users/export` and `POST /api/users/import`) using the `maatwebsite/excel` package, with strict row validation and upsert logic.
 - Standardized `ApiErrorCode` enum under `App\Support\Enums` to enforce robust API response schemas (`CF-027`).

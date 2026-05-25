@@ -610,12 +610,12 @@ class QuoteController extends Controller
         $perPage = min(max((int) $request->integer('per_page', 15), 1), 100);
 
         $quotes = QueryBuilder::for(Quote::class)
-            ->allowedFilters([
+            ->allowedFilters(
                 AllowedFilter::scope('search'),       // ?filter[search]=... → scopeSearch (text OR author)
                 AllowedFilter::partial('text'),       // ?filter[text]=...   → khusus teks
                 AllowedFilter::partial('author'),     // ?filter[author]=... → khusus penulis
                 AllowedFilter::exact('is_active'),    // ?filter[is_active]=1
-            ])
+            )
             ->allowedSorts('author', 'is_active', 'created_at', 'updated_at')
             ->defaultSort('-created_at')
             ->paginate($perPage)
@@ -667,12 +667,12 @@ $perPage = min(max((int) $request->integer('per_page', 15), 1), 100);
 
 // 3) Hanya filter & sort yang DI-WHITELIST yang diizinkan.
 QueryBuilder::for(Quote::class)
-    ->allowedFilters([
+    ->allowedFilters(                      // variadic (string|AllowedFilter ...), bukan array — sesuai blueprint & lolos Larastan
         AllowedFilter::scope('search'),    // gabungan text + author (scopeSearch)
         AllowedFilter::partial('text'),    // LOWER(text) LIKE LOWER('%..%') → case-insensitive
         AllowedFilter::partial('author'),
         AllowedFilter::exact('is_active'),
-    ])
+    )
     ->allowedSorts('author', 'is_active', 'created_at', 'updated_at')
     ->defaultSort('-created_at')           // default: terbaru di atas
     ->paginate($perPage)

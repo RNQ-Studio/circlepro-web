@@ -4,9 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\AppConfig;
 use App\Models\AppVersion;
+use App\Models\Article;
 use App\Models\Category;
 use App\Models\Notification;
 use App\Models\OtpCode;
+use App\Models\Tag;
 use App\Models\User;
 use App\Models\UserDevice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,5 +40,11 @@ class ModelFactoryTest extends TestCase
 
         $otpCode = OtpCode::factory()->create();
         $this->assertDatabaseHas('otp_codes', ['id' => $otpCode->id]);
+
+        $article = Article::factory()->create();
+        $this->assertDatabaseHas('articles', ['id' => $article->id]);
+
+        $tag = Tag::factory()->create();
+        $this->assertDatabaseHas('tags', ['id' => $tag->id]);
     }
 }

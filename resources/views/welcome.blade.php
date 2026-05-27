@@ -76,6 +76,7 @@
                 <div class="hidden items-center gap-2 md:flex">
                     <a href="#features" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600">Fitur</a>
                     <a href="#quickstart" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600">Quick Start</a>
+                    <a href="/articles" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600">Berita AI</a>
                     <a href="/docs/api" class="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600">API Docs</a>
                     <a href="/admin" class="ml-1 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow-md">
                         <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -108,6 +109,7 @@
                  class="flex flex-col gap-1 border-t border-gray-100 pb-4 pt-3 md:hidden">
                 <a href="#features" @click="mobileMenu = false" class="rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600">Fitur</a>
                 <a href="#quickstart" @click="mobileMenu = false" class="rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600">Quick Start</a>
+                <a href="/articles" @click="mobileMenu = false" class="rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600">Berita AI</a>
                 <a href="/docs/api" class="rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-blue-50 hover:text-blue-600">API Docs</a>
                 <a href="/admin" class="mt-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700">
                     <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -407,6 +409,19 @@
                     <div>
                         <p class="text-sm font-semibold text-gray-900">API Docs (Scramble)</p>
                         <p class="text-xs text-gray-400">localhost:8000/docs/api</p>
+                    </div>
+                </a>
+
+                {{-- Berita AI (Public Blog) --}}
+                <a href="/articles" class="group flex items-center gap-4 rounded-xl border border-gray-100 bg-gray-50 p-5 transition-all hover:border-blue-200 hover:bg-blue-50">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                        <svg class="h-5 w-5 text-gray-400 transition-colors group-hover:text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18V6.125c0-.621.504-1.125 1.125-1.125H9.75M8.25 21h8.25" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900">Berita AI &amp; Blog (Tanpa Login)</p>
+                        <p class="text-xs text-gray-400">localhost:8000/articles</p>
                     </div>
                 </a>
 

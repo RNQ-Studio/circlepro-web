@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\UserExcelController;
 use App\Http\Controllers\Api\V1\AppController;
+use App\Http\Controllers\Api\V1\ArticleController;
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OtpController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\QuoteController;
+use App\Http\Controllers\Api\V1\TagController;
 use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -77,6 +79,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('assets/upload', [AssetController::class, 'upload'])->middleware('throttle:30,1');
 
         Route::apiResource('categories', CategoryController::class);
+        Route::apiResource('articles', ArticleController::class);
+        Route::apiResource('tags', TagController::class);
 
         Route::prefix('notifications')->group(function (): void {
             Route::get('/', [NotificationController::class, 'index']);

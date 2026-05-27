@@ -24,6 +24,7 @@ class AvatarTest extends TestCase
         parent::setUp();
 
         Storage::fake('public');
+        Storage::fake('gcs');
 
         $client = app(ClientRepository::class)->createPasswordGrantClient('Test Password Grant', 'users', true);
         config([
@@ -57,7 +58,10 @@ class AvatarTest extends TestCase
 
         $this->user->refresh();
         $this->assertNotNull($this->user->avatar);
-        Storage::disk('public')->assertExists($this->user->avatar);
+
+        $asset = \App\Models\Asset::find($this->user->avatar);
+        $this->assertNotNull($asset);
+        Storage::disk('gcs')->assertExists($asset->path);
     }
 
     public function test_uploading_new_avatar_deletes_old_one(): void
@@ -70,15 +74,23 @@ class AvatarTest extends TestCase
             ->assertOk();
 
         $this->user->refresh();
-        $oldPath = $this->user->avatar;
+        $oldAvatarId = $this->user->avatar;
+        $oldAsset = \App\Models\Asset::find($oldAvatarId);
+        $this->assertNotNull($oldAsset);
+        $oldPath = $oldAsset->path;
+
+        Storage::disk('gcs')->assertExists($oldPath);
 
         $this->withToken($this->accessToken)
             ->postJson('/api/v1/auth/avatar', ['avatar' => $file2])
             ->assertOk();
 
-        Storage::disk('public')->assertMissing($oldPath);
+        Storage::disk('gcs')->assertMissing($oldPath);
         $this->user->refresh();
-        Storage::disk('public')->assertExists($this->user->avatar);
+        
+        $newAsset = \App\Models\Asset::find($this->user->avatar);
+        $this->assertNotNull($newAsset);
+        Storage::disk('gcs')->assertExists($newAsset->path);
     }
 
     public function test_avatar_url_appears_in_me_response(): void

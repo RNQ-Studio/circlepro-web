@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\FileUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 /**
  * @mixin User
@@ -19,7 +20,11 @@ class UserResource extends JsonResource
     {
         $avatarUrl = null;
         if ($this->avatar !== null) {
-            $avatarUrl = app(FileUploadService::class)->url($this->avatar);
+            if (Str::isUuid($this->avatar)) {
+                $avatarUrl = $this->avatarAsset?->getPublicUrl();
+            } else {
+                $avatarUrl = app(FileUploadService::class)->url($this->avatar);
+            }
         }
 
         return [

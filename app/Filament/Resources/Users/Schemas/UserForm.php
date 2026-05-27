@@ -2,11 +2,17 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Models\Asset;
+use App\Services\AssetUploadService;
+use App\Services\AssetDeletionService;
+use App\Services\FileUploadService;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class UserForm
 {
@@ -17,11 +23,72 @@ class UserForm
                 FileUpload::make('avatar')
                     ->image()
                     ->imageEditor()
-                    ->disk(config('filesystems.default', 'public'))
-                    ->directory('avatars')
                     ->maxSize(2048)
                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                    ->nullable(),
+                    ->nullable()
+                    ->fetchFileInformation(false)
+                    ->getUploadedFileUsing(function ($file) {
+                        if (! $file) {
+                            return null;
+                        }
+                        if (Str::isUuid($file)) {
+                            $asset = Asset::find($file);
+                            if ($asset) {
+                                return [
+                                    'name' => $asset->original_filename,
+                                    'size' => $asset->size,
+                                    'type' => $asset->mime_type,
+                                    'url' => $asset->getPublicUrl(),
+                                ];
+                            }
+                        }
+                        // Legacy fallback
+                        $disk = Storage::disk(config('filesystems.default', 'public'));
+                        if ($disk->exists($file)) {
+                            return [
+                                'name' => basename($file),
+                                'size' => $disk->size($file),
+                                'type' => $disk->mimeType($file),
+                                'url' => $disk->url($file),
+                            ];
+                        }
+                        return null;
+                    })
+                    ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file, $record) {
+                        $asset = app(AssetUploadService::class)->upload(
+                            file: $file,
+                            type: 'avatar',
+                            userId: $record?->getKey(),
+                        );
+
+                        if ($record && $record->avatar) {
+                            $oldAvatar = $record->avatar;
+                            if (Str::isUuid($oldAvatar)) {
+                                $oldAsset = Asset::find($oldAvatar);
+                                if ($oldAsset) {
+                                    app(AssetDeletionService::class)->hardDelete($oldAsset);
+                                }
+                            } else {
+                                app(FileUploadService::class)->delete($oldAvatar);
+                            }
+                        }
+
+                        return $asset->id;
+                    })
+                    ->deleteUploadedFileUsing(function ($state) {
+                        if (! $state) {
+                            return;
+                        }
+                        if (Str::isUuid($state)) {
+                            $asset = Asset::find($state);
+                            if ($asset) {
+                                app(AssetDeletionService::class)->hardDelete($asset);
+                            }
+                        } else {
+                            app(FileUploadService::class)->delete($state);
+                        }
+                    }),
+
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255),

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -75,6 +76,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAu
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
+    }
+
+    /** @return BelongsTo<Asset, $this> */
+    public function avatarAsset(): BelongsTo
+    {
+        return $this->belongsTo(Asset::class, 'avatar');
     }
 
     /**

@@ -11,13 +11,17 @@ use App\Http\Requests\Api\V1\RegisterRequest;
 use App\Http\Requests\Api\V1\UpdateProfileRequest;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
+use App\Models\Asset;
 use App\Services\Auth\AuthService;
 use App\Services\FileUploadService;
+use App\Services\AssetUploadService;
+use App\Services\AssetDeletionService;
 use App\Support\ApiResponse;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -25,6 +29,8 @@ class AuthController extends Controller
     public function __construct(
         private readonly AuthService $authService,
         private readonly FileUploadService $fileUploadService,
+        private readonly AssetUploadService $assetUploadService,
+        private readonly AssetDeletionService $assetDeletionService,
     ) {}
 
     /**
@@ -120,15 +126,27 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        // Delete old avatar before storing the new one
-        $this->fileUploadService->delete($user->avatar);
+        $oldAvatar = $user->avatar;
 
-        $path = $this->fileUploadService->upload(
-            $request->file('avatar'),
-            'avatars/'.$user->getKey(),
+        $asset = $this->assetUploadService->upload(
+            file: $request->file('avatar'),
+            type: 'avatar',
+            userId: $user->getKey(),
         );
 
-        $user->update(['avatar' => $path]);
+        $user->update(['avatar' => $asset->id]);
+
+        // Clean up old avatar if exists
+        if ($oldAvatar !== null && $oldAvatar !== '') {
+            if (Str::isUuid($oldAvatar)) {
+                $oldAsset = Asset::find($oldAvatar);
+                if ($oldAsset) {
+                    $this->assetDeletionService->hardDelete($oldAsset);
+                }
+            } else {
+                $this->fileUploadService->delete($oldAvatar);
+            }
+        }
 
         return ApiResponse::success(new UserResource($user->refresh()), 'Avatar updated');
     }

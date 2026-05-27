@@ -3,16 +3,17 @@
 namespace App\Filament\Resources\Users\Schemas;
 
 use App\Models\Asset;
-use App\Services\AssetUploadService;
 use App\Services\AssetDeletionService;
+use App\Services\AssetUploadService;
 use App\Services\FileUploadService;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class UserForm
 {
@@ -52,9 +53,10 @@ class UserForm
                                 'url' => $disk->url($file),
                             ];
                         }
+
                         return null;
                     })
-                    ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file, $record) {
+                    ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, $record) {
                         $asset = app(AssetUploadService::class)->upload(
                             file: $file,
                             type: 'avatar',

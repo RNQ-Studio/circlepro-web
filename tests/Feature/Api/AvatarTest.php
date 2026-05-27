@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Asset;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -59,7 +60,7 @@ class AvatarTest extends TestCase
         $this->user->refresh();
         $this->assertNotNull($this->user->avatar);
 
-        $asset = \App\Models\Asset::find($this->user->avatar);
+        $asset = Asset::find($this->user->avatar);
         $this->assertNotNull($asset);
         Storage::disk('gcs')->assertExists($asset->path);
     }
@@ -75,7 +76,7 @@ class AvatarTest extends TestCase
 
         $this->user->refresh();
         $oldAvatarId = $this->user->avatar;
-        $oldAsset = \App\Models\Asset::find($oldAvatarId);
+        $oldAsset = Asset::find($oldAvatarId);
         $this->assertNotNull($oldAsset);
         $oldPath = $oldAsset->path;
 
@@ -87,8 +88,8 @@ class AvatarTest extends TestCase
 
         Storage::disk('gcs')->assertMissing($oldPath);
         $this->user->refresh();
-        
-        $newAsset = \App\Models\Asset::find($this->user->avatar);
+
+        $newAsset = Asset::find($this->user->avatar);
         $this->assertNotNull($newAsset);
         Storage::disk('gcs')->assertExists($newAsset->path);
     }

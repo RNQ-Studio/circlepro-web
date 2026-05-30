@@ -32,13 +32,16 @@ class ClubController extends Controller
     {
         $perPage = min(max((int) $request->integer('per_page', 20), 1), 100);
 
-        $clubs = QueryBuilder::for(Organization::query()->where('type', OrganizationType::Club->value))
+        $clubs = QueryBuilder::for(
+            Organization::query()
+                ->where('type', OrganizationType::Club->value)
+                ->withCount(['members as member_count' => fn ($q) => $q->where('status', 'active')])
+        )
             ->allowedFilters(
                 AllowedFilter::exact('province'),
                 AllowedFilter::exact('city'),
                 AllowedFilter::scope('search'),
             )
-            ->withCount(['members as member_count' => fn ($q) => $q->where('status', 'active')])
             ->allowedSorts('name', 'created_at', 'member_count')
             ->defaultSort('name')
             ->paginate($perPage)
@@ -110,7 +113,7 @@ class ClubController extends Controller
 
         $members = $club->members()
             ->with('user.profile')
-            ->orderByRaw("array_position(ARRAY['owner','admin','coach','scorer','member'], role)")
+            ->orderByRaw("array_position(ARRAY['owner','admin','coach','scorer','member']::text[], (role)::text)")
             ->paginate(min(max((int) $request->integer('per_page', 30), 1), 100))
             ->appends($request->query());
 
@@ -162,14 +165,14 @@ class ClubController extends Controller
                 'session_id' => $s->id,
                 'user' => [
                     'id' => $s->user?->id,
-                    'full_name' => $s->user?->full_name ?? $s->user?->name,
+                    'full_name' => $s->user->full_name ?? $s->user->name,
                     'avatar_url' => $s->user?->profile?->avatar_url,
                 ],
                 'bow_class' => $s->bow_class->value,
                 'distance_category' => $s->distance_category->value,
                 'total_score' => $s->total_score,
                 'is_personal_best' => $s->is_personal_best,
-                'started_at' => $s->started_at?->toIso8601String(),
+                'started_at' => $s->started_at->toIso8601String(),
             ]);
 
         return ApiResponse::success($sessions);

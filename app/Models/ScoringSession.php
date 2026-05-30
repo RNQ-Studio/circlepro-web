@@ -26,14 +26,14 @@ use Illuminate\Support\Carbon;
  * @property string|null $event_division_id
  * @property string|null $scoring_session_group_id
  * @property string|null $title
- * @property BowClass $bow_class
- * @property DistanceCategory $distance_category
+ * @property BowClass|null $bow_class
+ * @property DistanceCategory|null $distance_category
  * @property int $distance_m
- * @property ArcheryEnvironment $environment
+ * @property ArcheryEnvironment|null $environment
  * @property int|null $target_face_cm
  * @property int $num_ends
  * @property int $arrows_per_end
- * @property ScoringSessionStatus $status
+ * @property ScoringSessionStatus|null $status
  * @property int $total_score
  * @property int $max_possible_score
  * @property int $arrows_shot
@@ -46,7 +46,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $started_at
  * @property Carbon|null $completed_at
  * @property string|null $client_uuid
- * @property SyncSource $source
+ * @property SyncSource|null $source
  * @property Carbon|null $synced_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at

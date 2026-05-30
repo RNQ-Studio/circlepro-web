@@ -20,7 +20,7 @@ class ClubMemberResource extends JsonResource
             'id' => $this->id,
             'user' => [
                 'id' => $this->user?->id,
-                'full_name' => $this->user?->full_name ?? $this->user?->name,
+                'full_name' => $this->user->full_name ?? $this->user->name,
                 'username' => $this->user?->username,
                 'avatar_url' => $this->user?->profile?->avatar_url,
             ],

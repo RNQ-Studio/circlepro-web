@@ -40,7 +40,7 @@ class ScoringSessionResource extends JsonResource
             'miss_count' => $this->miss_count,
             'is_personal_best' => $this->is_personal_best,
             'notes' => $this->notes,
-            'started_at' => $this->started_at?->toIso8601String(),
+            'started_at' => $this->started_at->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'client_uuid' => $this->client_uuid,
             'source' => $this->source->value,

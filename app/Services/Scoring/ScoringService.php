@@ -41,15 +41,15 @@ class ScoringService
                 'bow_class' => $data['bow_class'] ?? $session->bow_class?->value,
                 'distance_category' => $data['distance_category'] ?? $session->distance_category?->value,
                 'distance_m' => $data['distance_m'] ?? $session->distance_m,
-                'environment' => $data['environment'] ?? $session->environment?->value ?? 'outdoor',
+                'environment' => $data['environment'] ?? ($session->exists ? $session->environment->value : 'outdoor'),
                 'target_face_cm' => $data['target_face_cm'] ?? $session->target_face_cm,
                 'num_ends' => $data['num_ends'] ?? $session->num_ends,
                 'arrows_per_end' => $data['arrows_per_end'] ?? $session->arrows_per_end,
-                'status' => $data['status'] ?? $session->status?->value ?? ScoringSessionStatus::InProgress->value,
+                'status' => $data['status'] ?? ($session->exists ? $session->status->value : ScoringSessionStatus::InProgress->value),
                 'notes' => $data['notes'] ?? $session->notes,
                 'started_at' => $data['started_at'] ?? $session->started_at ?? now(),
                 'completed_at' => $data['completed_at'] ?? $session->completed_at,
-                'source' => $data['source'] ?? $session->source?->value ?? 'mobile',
+                'source' => $data['source'] ?? ($session->exists ? $session->source->value : 'mobile'),
                 'client_uuid' => $data['client_uuid'] ?? $session->client_uuid,
             ]);
 
@@ -307,7 +307,7 @@ class ScoringService
 
         $trend = $sessions->map(fn (ScoringSession $s): array => [
             'session_id' => $s->id,
-            'date' => $s->started_at?->toDateString(),
+            'date' => $s->started_at->toDateString(),
             'avg_per_arrow' => $s->avg_per_arrow,
             'total_score' => $s->total_score,
         ])->values()->all();
@@ -330,7 +330,7 @@ class ScoringService
                     'distance_category' => $pb->distance_category->value,
                     'num_arrows' => $pb->num_arrows,
                     'best_score' => $pb->best_score,
-                    'achieved_at' => $pb->achieved_at?->toIso8601String(),
+                    'achieved_at' => $pb->achieved_at->toIso8601String(),
                 ])->all(),
             'trend' => $trend,
         ];
@@ -341,7 +341,7 @@ class ScoringService
      */
     private function avgPerArrowSince(Collection $sessions, Carbon $since): ?float
     {
-        $window = $sessions->filter(fn (ScoringSession $s): bool => $s->started_at !== null && $s->started_at->greaterThanOrEqualTo($since));
+        $window = $sessions->filter(fn (ScoringSession $s): bool => $s->started_at->greaterThanOrEqualTo($since));
         $arrows = (int) $window->sum('arrows_shot');
         $score = (int) $window->sum('total_score');
 

@@ -14,6 +14,13 @@ return [
     |
     */
 
+    'google' => [
+        // OAuth client ID used to validate the `aud` of Google ID tokens for
+        // social sign-in (ManahPro task 2.1). When empty, /auth/social returns
+        // 501 SOCIAL_AUTH_NOT_CONFIGURED.
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],

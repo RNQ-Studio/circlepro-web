@@ -6,12 +6,20 @@ use App\Http\Controllers\Api\V1\ArticleController;
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\ClubController;
+use App\Http\Controllers\Api\V1\CommentController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
+use App\Http\Controllers\Api\V1\EquipmentProfileController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OtpController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
+use App\Http\Controllers\Api\V1\PostController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\QuoteController;
+use App\Http\Controllers\Api\V1\ScoringSessionController;
+use App\Http\Controllers\Api\V1\SocialAuthController;
 use App\Http\Controllers\Api\V1\TagController;
 use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +53,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('register', [AuthController::class, 'register'])->middleware(['throttle:6,1', 'check.maintenance']);
         Route::post('login', [AuthController::class, 'login'])->middleware(['throttle:6,1', 'check.maintenance']);
         Route::post('refresh', [AuthController::class, 'refresh'])->middleware(['throttle:6,1', 'check.maintenance']);
+        // Social sign-in (Google/Apple) — structure ready, verification deferred (task 2.1a)
+        Route::post('social', [SocialAuthController::class, 'authenticate'])->middleware(['throttle:10,1', 'check.maintenance']);
         Route::post('forgot-password', [PasswordResetController::class, 'sendResetLink'])
             ->middleware(['throttle:6,1', 'check.maintenance']);
         Route::post('reset-password', [PasswordResetController::class, 'reset'])
@@ -83,10 +93,66 @@ Route::prefix('v1')->group(function (): void {
         Route::apiResource('tags', TagController::class);
 
         Route::prefix('notifications')->group(function (): void {
+            // Per-category preferences (ManahPro, task 2.5)
+            Route::get('preferences', [NotificationPreferenceController::class, 'index']);
+            Route::put('preferences', [NotificationPreferenceController::class, 'update']);
+
             Route::get('/', [NotificationController::class, 'index']);
             Route::get('unread-count', [NotificationController::class, 'unreadCount']);
             Route::post('read-all', [NotificationController::class, 'markAllRead']);
             Route::post('{notification}/read', [NotificationController::class, 'markRead']);
         });
+
+        /*
+        |----------------------------------------------------------------------
+        | ManahPro — Module 1 (TRACK / Scoring) — offline-first
+        |----------------------------------------------------------------------
+        */
+        Route::prefix('scoring')->group(function (): void {
+            Route::apiResource('equipment-profiles', EquipmentProfileController::class);
+
+            Route::get('dashboard', [ScoringSessionController::class, 'dashboard']);
+            Route::post('sessions/sync', [ScoringSessionController::class, 'sync'])
+                ->middleware('throttle:60,1');
+            Route::get('sessions/{scoringSession}/summary', [ScoringSessionController::class, 'summary']);
+            Route::apiResource('sessions', ScoringSessionController::class)
+                ->parameters(['sessions' => 'scoringSession']);
+        });
+
+        /*
+        |----------------------------------------------------------------------
+        | ManahPro — Phase 2: Identity & Social
+        |----------------------------------------------------------------------
+        */
+        // Profile (Module 0/2, task 2.2)
+        Route::get('profile', [ProfileController::class, 'show']);
+        Route::put('profile', [ProfileController::class, 'update']);
+        Route::get('users/{user}/profile', [ProfileController::class, 'showPublic']);
+
+        // Clubs = organizations type=club (Module 0, task 2.7)
+        Route::prefix('clubs')->group(function (): void {
+            Route::get('/', [ClubController::class, 'index']);
+            Route::post('/', [ClubController::class, 'store'])->middleware('throttle:20,1');
+            Route::get('mine', [ClubController::class, 'mine']);
+            Route::get('{club}', [ClubController::class, 'show']);
+            Route::put('{club}', [ClubController::class, 'update']);
+            Route::post('{club}/join', [ClubController::class, 'join']);
+            Route::post('{club}/leave', [ClubController::class, 'leave']);
+            Route::get('{club}/members', [ClubController::class, 'members']);
+            Route::delete('{club}/members/{user}', [ClubController::class, 'removeMember']);
+            Route::put('{club}/members/{user}/role', [ClubController::class, 'updateRole']);
+            Route::get('{club}/activity', [ClubController::class, 'activity']);
+        });
+
+        // Community feed (Module 5, task 2.11)
+        Route::get('posts', [PostController::class, 'index']);
+        Route::post('posts', [PostController::class, 'store'])->middleware('throttle:30,1');
+        Route::get('posts/{post}', [PostController::class, 'show']);
+        Route::delete('posts/{post}', [PostController::class, 'destroy']);
+        Route::post('posts/{post}/like', [PostController::class, 'like']);
+        Route::delete('posts/{post}/like', [PostController::class, 'unlike']);
+        Route::get('posts/{post}/comments', [CommentController::class, 'index']);
+        Route::post('posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:30,1');
+        Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
     });
 });

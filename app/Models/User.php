@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Notifications\VerifyEmailNotification;
+use App\Support\Enums\SystemRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -23,22 +26,28 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
+ * @property int $id
  * @property string $name
+ * @property string|null $username
+ * @property string|null $full_name
  * @property string $email
  * @property string|null $phone
  * @property string|null $avatar
  * @property bool $is_active
+ * @property SystemRole $system_role
  * @property Carbon|null $email_verified_at
  * @property Carbon|null $phone_verified_at
+ * @property Carbon|null $last_active_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
-#[Fillable(['name', 'email', 'password', 'is_active', 'avatar', 'phone', 'phone_verified_at'])]
+#[Fillable(['name', 'username', 'full_name', 'email', 'password', 'is_active', 'system_role', 'avatar', 'phone', 'phone_verified_at', 'last_active_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAuthenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasRoles, LogsActivity, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, LogsActivity, Notifiable, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -84,6 +93,50 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAu
         return $this->belongsTo(Asset::class, 'avatar');
     }
 
+    // ─── ManahPro relationships (Module 0 & 1) ──────────────────────
+
+    /** @return HasOne<UserProfile, $this> */
+    public function profile(): HasOne
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
+    /** @return HasOne<UserSetting, $this> */
+    public function settings(): HasOne
+    {
+        return $this->hasOne(UserSetting::class);
+    }
+
+    /** @return HasMany<UserAuthProvider, $this> */
+    public function authProviders(): HasMany
+    {
+        return $this->hasMany(UserAuthProvider::class);
+    }
+
+    /** @return HasMany<OrganizationMember, $this> */
+    public function organizationMemberships(): HasMany
+    {
+        return $this->hasMany(OrganizationMember::class);
+    }
+
+    /** @return HasMany<EquipmentProfile, $this> */
+    public function equipmentProfiles(): HasMany
+    {
+        return $this->hasMany(EquipmentProfile::class);
+    }
+
+    /** @return HasMany<ScoringSession, $this> */
+    public function scoringSessions(): HasMany
+    {
+        return $this->hasMany(ScoringSession::class);
+    }
+
+    /** @return HasMany<PersonalBest, $this> */
+    public function personalBests(): HasMany
+    {
+        return $this->hasMany(PersonalBest::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -94,8 +147,10 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAu
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
+            'last_active_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'system_role' => SystemRole::class,
         ];
     }
 

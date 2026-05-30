@@ -49,29 +49,34 @@ return new class extends Migration
             $table->index('storage_type');
         });
 
-        // Partial index: ramping, hanya mengindeks baris yang relevan untuk query scheduler.
+        // PostgreSQL-specific tuned indexes (partial + GIN). Guarded so the
+        // documented SQLite test fallback (see phpunit.xml) can run; Postgres
+        // behaviour is unchanged.
+        if (DB::getDriverName() === 'pgsql') {
+            // Partial index: ramping, hanya mengindeks baris yang relevan untuk query scheduler.
 
-        // Scope expired: status='active' AND retain_until < now() AND retain_until IS NOT NULL
-        DB::statement(
-            "CREATE INDEX assets_expired_idx ON assets (status, retain_until)
-             WHERE status = 'active' AND retain_until IS NOT NULL"
-        );
+            // Scope expired: status='active' AND retain_until < now() AND retain_until IS NOT NULL
+            DB::statement(
+                "CREATE INDEX assets_expired_idx ON assets (status, retain_until)
+                 WHERE status = 'active' AND retain_until IS NOT NULL"
+            );
 
-        // Scope pending hard delete: status='soft_deleted' AND scheduled_hard_delete_at <= now()
-        DB::statement(
-            "CREATE INDEX assets_pending_hard_delete_idx ON assets (status, scheduled_hard_delete_at)
-             WHERE status = 'soft_deleted'"
-        );
+            // Scope pending hard delete: status='soft_deleted' AND scheduled_hard_delete_at <= now()
+            DB::statement(
+                "CREATE INDEX assets_pending_hard_delete_idx ON assets (status, scheduled_hard_delete_at)
+                 WHERE status = 'soft_deleted'"
+            );
 
-        // GIN index jsonb_path_ops: lebih kecil & cepat dari json_ops untuk operator containment (@>)
-        DB::statement(
-            'CREATE INDEX assets_metadata_gin_idx ON assets USING GIN (metadata jsonb_path_ops)'
-        );
+            // GIN index jsonb_path_ops: lebih kecil & cepat dari json_ops untuk operator containment (@>)
+            DB::statement(
+                'CREATE INDEX assets_metadata_gin_idx ON assets USING GIN (metadata jsonb_path_ops)'
+            );
 
-        // Partial index untuk lookup dedup berdasarkan checksum
-        DB::statement(
-            'CREATE INDEX assets_checksum_idx ON assets (checksum) WHERE checksum IS NOT NULL'
-        );
+            // Partial index untuk lookup dedup berdasarkan checksum
+            DB::statement(
+                'CREATE INDEX assets_checksum_idx ON assets (checksum) WHERE checksum IS NOT NULL'
+            );
+        }
     }
 
     public function down(): void

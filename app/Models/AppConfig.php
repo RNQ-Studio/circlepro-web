@@ -39,18 +39,29 @@ class AppConfig extends Model
 
     public static function get(string $key, mixed $default = null): mixed
     {
-        /** @var AppConfig|null $config */
-        $config = Cache::remember(
+        $cached = Cache::remember(
             "app_config:{$key}",
             now()->addHour(),
-            fn () => static::query()->where('key', $key)->first()
+            function () use ($key) {
+                /** @var AppConfig|null $config */
+                $config = static::query()->where('key', $key)->first();
+
+                if ($config === null) {
+                    return null;
+                }
+
+                return [
+                    'value' => $config->value,
+                    'type' => $config->type->value,
+                ];
+            }
         );
 
-        if ($config === null) {
+        if ($cached === null) {
             return $default;
         }
 
-        return $config->castValue();
+        return static::castRawValue($cached['value'], $cached['type']);
     }
 
     public static function set(string $key, mixed $value): void
@@ -80,13 +91,20 @@ class AppConfig extends Model
         Cache::forget('app_config:all');
     }
 
+    public static function castRawValue(mixed $value, AppConfigType|string $type): mixed
+    {
+        $typeEnum = $type instanceof AppConfigType ? $type : AppConfigType::from($type);
+
+        return match ($typeEnum) {
+            AppConfigType::Boolean => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+            AppConfigType::Integer => (int) $value,
+            AppConfigType::Json => json_decode((string) $value, true),
+            default => $value,
+        };
+    }
+
     private function castValue(): mixed
     {
-        return match ($this->type) {
-            AppConfigType::Boolean => filter_var($this->value, FILTER_VALIDATE_BOOLEAN),
-            AppConfigType::Integer => (int) $this->value,
-            AppConfigType::Json => json_decode((string) $this->value, true),
-            default => $this->value,
-        };
+        return static::castRawValue($this->value, $this->type);
     }
 }

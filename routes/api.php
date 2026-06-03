@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\V1\ClubController;
 use App\Http\Controllers\Api\V1\CommentController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\EquipmentProfileController;
+use App\Http\Controllers\Api\V1\EventController;
+use App\Http\Controllers\Api\V1\EventRegistrationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
@@ -154,5 +156,19 @@ Route::prefix('v1')->group(function (): void {
         Route::get('posts/{post}/comments', [CommentController::class, 'index']);
         Route::post('posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:30,1');
         Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
+
+        /*
+        |----------------------------------------------------------------------
+        | ManahPro — Phase 3: Events & Ranking (Event Foundation)
+        |----------------------------------------------------------------------
+        */
+        Route::get('my-events', [EventController::class, 'myEvents']);
+        Route::apiResource('events', EventController::class);
+
+        Route::get('my-tickets', [EventRegistrationController::class, 'myTickets']);
+        Route::post('events/{event}/register', [EventRegistrationController::class, 'register']);
+        Route::get('events/{event}/participants', [EventRegistrationController::class, 'participants']);
+        Route::post('registrations/{registration}/check-in', [EventRegistrationController::class, 'checkIn']);
+        Route::put('registrations/{registration}/status', [EventRegistrationController::class, 'updateStatus']);
     });
 });

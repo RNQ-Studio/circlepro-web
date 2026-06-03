@@ -69,6 +69,17 @@ class ScoringService
 
             if ($session->status === ScoringSessionStatus::Completed) {
                 $this->evaluatePersonalBest($session);
+
+                try {
+                    $gamification = app(\App\Services\GamificationService::class);
+                    $gamification->recordSessionCompletion(
+                        $user,
+                        $session->arrows_shot,
+                        (bool) $session->is_personal_best
+                    );
+                } catch (\Exception $e) {
+                    \Log::error("Gamification reward error: " . $e->getMessage());
+                }
             }
 
             $session->save();

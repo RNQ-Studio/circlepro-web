@@ -2,16 +2,23 @@
 
 use App\Http\Controllers\Api\UserExcelController;
 use App\Http\Controllers\Api\V1\AppController;
+use App\Http\Controllers\Api\V1\ArcheryRangeController;
 use App\Http\Controllers\Api\V1\ArticleController;
 use App\Http\Controllers\Api\V1\AssetController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ClubController;
+use App\Http\Controllers\Api\V1\ClubScheduleController;
+use App\Http\Controllers\Api\V1\ClubAttendanceController;
+use App\Http\Controllers\Api\V1\CoachController;
+use App\Http\Controllers\Api\V1\CoachReviewController;
 use App\Http\Controllers\Api\V1\CommentController;
 use App\Http\Controllers\Api\V1\EmailVerificationController;
 use App\Http\Controllers\Api\V1\EquipmentProfileController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\EventRegistrationController;
+use App\Http\Controllers\Api\V1\EventScoringController;
+use App\Http\Controllers\Api\V1\GamificationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
@@ -20,6 +27,8 @@ use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\PostController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\QuoteController;
+use App\Http\Controllers\Api\V1\RatingController;
+use App\Http\Controllers\Api\V1\FollowController;
 use App\Http\Controllers\Api\V1\ScoringSessionController;
 use App\Http\Controllers\Api\V1\SocialAuthController;
 use App\Http\Controllers\Api\V1\TagController;
@@ -87,12 +96,18 @@ Route::prefix('v1')->group(function (): void {
 
     Route::apiResource('quotes', QuoteController::class);
 
+    // Public leaderboard & rating lookup routes
+    Route::get('leaderboard', [RatingController::class, 'getLeaderboard']);
+    Route::get('users/{user}/ratings', [RatingController::class, 'getUserRatings']);
+    Route::get('users/{user}/ratings/{rating}/history', [RatingController::class, 'getRatingHistory']);
+
     Route::middleware(['auth:api', 'check.maintenance'])->group(function (): void {
         Route::post('assets/upload', [AssetController::class, 'upload'])->middleware('throttle:30,1');
 
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('articles', ArticleController::class);
         Route::apiResource('tags', TagController::class);
+        Route::apiResource('ranges', ArcheryRangeController::class);
 
         Route::prefix('notifications')->group(function (): void {
             // Per-category preferences (ManahPro, task 2.5)
@@ -131,6 +146,23 @@ Route::prefix('v1')->group(function (): void {
         Route::put('profile', [ProfileController::class, 'update']);
         Route::get('users/{user}/profile', [ProfileController::class, 'showPublic']);
 
+        // Gamification (Phase 4, tasks 4.9 & 4.10)
+        Route::get('gamification/stats', [GamificationController::class, 'stats']);
+
+        // Follow system (Phase 4, tasks 4.1 & 4.2)
+        Route::post('users/{user}/follow', [FollowController::class, 'follow']);
+        Route::post('users/{user}/unfollow', [FollowController::class, 'unfollow']);
+        Route::get('users/{user}/followers', [FollowController::class, 'followers']);
+        Route::get('users/{user}/following', [FollowController::class, 'following']);
+
+        // Coaches (Phase 4, task 4.4)
+        Route::get('coaches', [CoachController::class, 'index']);
+        Route::post('coaches', [CoachController::class, 'store']);
+        Route::get('coaches/{coach}', [CoachController::class, 'show']);
+        Route::put('coaches/{coach}', [CoachController::class, 'update']);
+        Route::get('coaches/{coach}/reviews', [CoachReviewController::class, 'index']);
+        Route::post('coaches/{coach}/reviews', [CoachReviewController::class, 'store']);
+
         // Clubs = organizations type=club (Module 0, task 2.7)
         Route::prefix('clubs')->group(function (): void {
             Route::get('/', [ClubController::class, 'index']);
@@ -144,6 +176,16 @@ Route::prefix('v1')->group(function (): void {
             Route::delete('{club}/members/{user}', [ClubController::class, 'removeMember']);
             Route::put('{club}/members/{user}/role', [ClubController::class, 'updateRole']);
             Route::get('{club}/activity', [ClubController::class, 'activity']);
+
+            // Schedules & Attendances (Phase 4, task 4.3)
+            Route::get('{club}/schedules', [ClubScheduleController::class, 'index']);
+            Route::post('{club}/schedules', [ClubScheduleController::class, 'store']);
+            Route::get('{club}/schedules/{schedule}', [ClubScheduleController::class, 'show']);
+            Route::put('{club}/schedules/{schedule}', [ClubScheduleController::class, 'update']);
+            Route::delete('{club}/schedules/{schedule}', [ClubScheduleController::class, 'destroy']);
+            Route::get('{club}/schedules/{schedule}/attendance', [ClubAttendanceController::class, 'index']);
+            Route::post('{club}/schedules/{schedule}/attendance', [ClubAttendanceController::class, 'store']);
+            Route::get('{club}/my-attendance', [ClubAttendanceController::class, 'myAttendance']);
         });
 
         // Community feed (Module 5, task 2.11)
@@ -170,5 +212,15 @@ Route::prefix('v1')->group(function (): void {
         Route::get('events/{event}/participants', [EventRegistrationController::class, 'participants']);
         Route::post('registrations/{registration}/check-in', [EventRegistrationController::class, 'checkIn']);
         Route::put('registrations/{registration}/status', [EventRegistrationController::class, 'updateStatus']);
+
+        // Live Scoring & Leaderboard routes
+        Route::post('events/{event}/assign-targets', [EventScoringController::class, 'assignTargets']);
+        Route::get('events/{event}/divisions/{division}/targets/{target_butt}/scorecard', [EventScoringController::class, 'getTargetScorecard']);
+        Route::post('events/{event}/divisions/{division}/targets/{target_butt}/ends/{end_number}', [EventScoringController::class, 'saveEndScores']);
+        Route::get('events/{event}/divisions/{division}/leaderboard', [EventScoringController::class, 'getLeaderboard']);
+
+        // Glicko-2 Rating calculation & private rating routes
+        Route::post('events/{event}/divisions/{division}/finalize-ratings', [RatingController::class, 'finalizeRatings']);
+        Route::get('my-ratings', [RatingController::class, 'getMyRatings']);
     });
 });

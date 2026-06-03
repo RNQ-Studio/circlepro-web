@@ -23,6 +23,13 @@ class ProfileResource extends JsonResource
     public function toArray(Request $request): array
     {
         $p = $this->profile;
+        $auth = $request->user('api') ?? $request->user();
+        $isFollowing = false;
+        if ($auth && $auth->id !== $this->id) {
+            $isFollowing = \App\Models\Follow::where('follower_id', $auth->id)
+                ->where('followee_id', $this->id)
+                ->exists();
+        }
 
         return [
             'id' => $this->id,
@@ -44,6 +51,9 @@ class ProfileResource extends JsonResource
             'peak_title' => $p?->peak_title,
             'rating' => null, // national ranking lands in Phase 3
             'stats' => $this->stats,
+            'is_following' => $isFollowing,
+            'followers_count' => \App\Models\Follow::where('followee_id', $this->id)->count(),
+            'following_count' => \App\Models\Follow::where('follower_id', $this->id)->count(),
         ];
     }
 }

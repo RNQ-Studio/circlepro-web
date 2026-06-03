@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
@@ -13,13 +13,29 @@ use Illuminate\Support\Carbon;
  * @property int $followee_id
  * @property Carbon|null $created_at
  */
-class Follow extends Model
+class Follow extends Pivot
 {
     use HasUlids;
 
-    public const UPDATED_AT = null;
+    protected $table = 'follows';
+
+    public $timestamps = false;
 
     protected $fillable = ['follower_id', 'followee_id'];
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (self $model): void {
+            $model->created_at = $model->created_at ?? now();
+        });
+    }
+
+    public function getUpdatedAtColumn()
+    {
+        return null;
+    }
 
     /** @return BelongsTo<User, $this> */
     public function follower(): BelongsTo

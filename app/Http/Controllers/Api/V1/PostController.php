@@ -27,8 +27,14 @@ class PostController extends Controller
         $userId = $request->user()->id;
         $myClubIds = $request->user()->organizationMemberships()->pluck('organization_id');
 
-        $base = Post::query()
-            ->where(function (Builder $q) use ($userId, $myClubIds): void {
+        $base = Post::query();
+
+        if ($request->query('feed') === 'following') {
+            $followingIds = $request->user()->followings()->pluck('users.id')->push($userId);
+            $base->whereIn('author_id', $followingIds);
+        }
+
+        $base->where(function (Builder $q) use ($userId, $myClubIds): void {
                 $q->where('visibility', PostVisibility::Public->value)
                     ->orWhere('author_id', $userId)
                     ->orWhere(function (Builder $club) use ($myClubIds): void {

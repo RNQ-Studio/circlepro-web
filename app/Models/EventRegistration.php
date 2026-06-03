@@ -17,6 +17,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $payment_id
  * @property string|null $bib_number
  * @property string|null $qr_code
+ * @property int|null $target_butt
+ * @property string|null $target_letter
  * @property Carbon|null $checked_in_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -35,6 +37,8 @@ class EventRegistration extends Model
         'payment_id',
         'bib_number',
         'qr_code',
+        'target_butt',
+        'target_letter',
         'checked_in_at',
     ];
 
@@ -44,6 +48,7 @@ class EventRegistration extends Model
             'status' => RegistrationStatus::class,
             'checked_in_at' => 'datetime',
             'user_id' => 'integer',
+            'target_butt' => 'integer',
         ];
     }
 

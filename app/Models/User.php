@@ -102,6 +102,38 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAu
         return $this->hasOne(UserProfile::class);
     }
 
+    /** @return HasOne<CoachProfile, $this> */
+    public function coachProfile(): HasOne
+    {
+        return $this->hasOne(CoachProfile::class);
+    }
+
+    /** @return HasOne<UserStat, $this> */
+    public function stats(): HasOne
+    {
+        return $this->hasOne(UserStat::class);
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Badge, $this> */
+    public function badges(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Badge::class, 'user_badges')
+            ->withPivot('unlocked_at')
+            ->withTimestamps();
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<User, $this> */
+    public function followings(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'follows', 'follower_id', 'followee_id')->using(Follow::class)->withPivot('created_at');
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<User, $this> */
+    public function followers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'follows', 'followee_id', 'follower_id')->using(Follow::class)->withPivot('created_at');
+    }
+
     /** @return HasOne<UserSetting, $this> */
     public function settings(): HasOne
     {

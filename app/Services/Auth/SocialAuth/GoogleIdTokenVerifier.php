@@ -9,7 +9,7 @@ interface GoogleIdTokenVerifier
     /**
      * Verify a Google ID token and return its claims.
      *
-     * @return array{sub: string, email: string|null, name: string|null, email_verified: bool}
+     * @return array{sub: string, email: string|null, name: string|null, email_verified: bool, picture: string|null}
      *
      * @throws SocialAuthNotConfiguredException when no client_id is configured
      * @throws AuthenticationException when the token is invalid/untrusted

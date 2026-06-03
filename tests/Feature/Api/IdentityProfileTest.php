@@ -103,7 +103,13 @@ class IdentityProfileTest extends TestCase
         {
             public function verify(string $idToken): array
             {
-                return ['sub' => 'google-123', 'email' => 'atlet@example.com', 'name' => 'Atlet Google', 'email_verified' => true];
+                return [
+                    'sub' => 'google-123',
+                    'email' => 'atlet@example.com',
+                    'name' => 'Atlet Google',
+                    'email_verified' => true,
+                    'picture' => 'https://lh3.googleusercontent.com/a/mock-profile-pic',
+                ];
             }
         });
 
@@ -112,7 +118,13 @@ class IdentityProfileTest extends TestCase
             ->assertJsonPath('data.is_new', true)
             ->assertJsonStructure(['data' => ['access_token', 'refresh_token', 'token_type', 'expires_in']]);
 
-        $this->assertDatabaseHas('users', ['email' => 'atlet@example.com']);
+        $this->assertDatabaseHas('users', [
+            'email' => 'atlet@example.com',
+            'avatar' => 'https://lh3.googleusercontent.com/a/mock-profile-pic',
+        ]);
+        $this->assertDatabaseHas('user_profiles', [
+            'avatar_url' => 'https://lh3.googleusercontent.com/a/mock-profile-pic',
+        ]);
         $this->assertDatabaseHas('user_auth_providers', ['provider' => 'google', 'provider_uid' => 'google-123']);
 
         // Second sign-in links to the same user (not a new account).
@@ -121,5 +133,17 @@ class IdentityProfileTest extends TestCase
             ->assertJsonPath('data.is_new', false);
 
         $this->assertSame(1, User::query()->where('email', 'atlet@example.com')->count());
+
+        // Verify resource output for /me
+        $user = User::query()->where('email', 'atlet@example.com')->firstOrFail();
+        $this->actingAs($user, 'api');
+        $this->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.avatar_url', 'https://lh3.googleusercontent.com/a/mock-profile-pic');
+
+        // Verify resource output for public profile
+        $this->getJson("/api/v1/users/{$user->id}/profile")
+            ->assertOk()
+            ->assertJsonPath('data.avatar_url', 'https://lh3.googleusercontent.com/a/mock-profile-pic');
     }
 }

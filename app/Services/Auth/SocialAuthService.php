@@ -43,7 +43,7 @@ class SocialAuthService
     /**
      * Find the user linked to this provider identity, or by email, else create one.
      *
-     * @param  array{sub: string, email: string|null, name: string|null, email_verified: bool}  $payload
+     * @param  array{sub: string, email: string|null, name: string|null, email_verified: bool, picture: string|null}  $payload
      * @return array{0: User, 1: bool} the user and whether it was just created
      */
     private function resolveUser(AuthProvider $provider, array $payload): array
@@ -55,28 +55,38 @@ class SocialAuthService
                 ->first();
 
             if ($link !== null) {
-                return [$link->user, false];
-            }
+                $user = $link->user;
+                $isNew = false;
+            } else {
+                $user = User::query()->where('email', $payload['email'])->first();
+                $isNew = $user === null;
 
-            $user = User::query()->where('email', $payload['email'])->first();
-            $isNew = $user === null;
+                if ($isNew) {
+                    $user = User::query()->create([
+                        'name' => $payload['name'] ?? 'Pemanah',
+                        'full_name' => $payload['name'],
+                        'email' => $payload['email'],
+                        'password' => Str::random(40), // hashed by the model cast; unusable for password login
+                        'email_verified_at' => $payload['email_verified'] ? now() : null,
+                    ]);
+                }
 
-            if ($isNew) {
-                $user = User::query()->create([
-                    'name' => $payload['name'] ?? 'Pemanah',
-                    'full_name' => $payload['name'],
+                UserAuthProvider::query()->create([
+                    'user_id' => $user->id,
+                    'provider' => $provider->value,
+                    'provider_uid' => $payload['sub'],
                     'email' => $payload['email'],
-                    'password' => Str::random(40), // hashed by the model cast; unusable for password login
-                    'email_verified_at' => $payload['email_verified'] ? now() : null,
                 ]);
             }
 
-            UserAuthProvider::query()->create([
-                'user_id' => $user->id,
-                'provider' => $provider->value,
-                'provider_uid' => $payload['sub'],
-                'email' => $payload['email'],
-            ]);
+            if (! empty($payload['picture'])) {
+                $user->avatar = $payload['picture'];
+                $user->save();
+
+                $profile = $user->profile ?: $user->profile()->create([]);
+                $profile->avatar_url = $payload['picture'];
+                $profile->save();
+            }
 
             return [$user, $isNew];
         });

@@ -35,6 +35,7 @@ class HttpGoogleIdTokenVerifier implements GoogleIdTokenVerifier
             'email' => $payload['email'] ?? null,
             'name' => $payload['name'] ?? null,
             'email_verified' => $verified === true || $verified === 'true',
+            'picture' => $payload['picture'] ?? null,
         ];
     }
 }

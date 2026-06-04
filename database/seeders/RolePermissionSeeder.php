@@ -17,7 +17,7 @@ class RolePermissionSeeder extends Seeder
     private const GUARD = 'web';
 
     /** @var list<string> */
-    private const RESOURCES = ['users', 'roles', 'categories', 'quotes', 'app_configs', 'app_versions', 'notifications', 'articles', 'tags'];
+    private const RESOURCES = ['users', 'roles', 'categories', 'quotes', 'app_configs', 'app_versions', 'notifications', 'articles', 'tags', 'target_faces'];
 
     /** @var list<string> */
     private const ABILITIES = ['viewAny', 'view', 'create', 'update', 'delete'];
@@ -50,6 +50,7 @@ class RolePermissionSeeder extends Seeder
             'notifications.viewAny', 'notifications.view', 'notifications.create', 'notifications.update', 'notifications.delete',
             'articles.viewAny', 'articles.view', 'articles.create', 'articles.update', 'articles.delete',
             'tags.viewAny', 'tags.view', 'tags.create', 'tags.update', 'tags.delete',
+            'target_faces.viewAny', 'target_faces.view', 'target_faces.create', 'target_faces.update', 'target_faces.delete',
         ]);
 
         $staff->syncPermissions([

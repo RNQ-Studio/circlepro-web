@@ -89,17 +89,6 @@ class TargetFaceSeeder extends Seeder
                 'organization_id' => $perpani?->id,
             ],
             [
-                'code' => 'jemparingan',
-                'name' => 'Jemparingan (Bandul)',
-                'image_path' => 'assets/images/targets/target_jemparingan.png',
-                'scoring_rules' => [
-                    ['value' => 3, 'label' => 'Sirah (3)', 'color' => '#E53935'],
-                    ['value' => 1, 'label' => 'Awak (1)', 'color' => '#FAFAFA'],
-                    ['value' => 0, 'label' => 'M', 'color' => '#E57373', 'is_miss' => true],
-                ],
-                'organization_id' => $perpatri?->id,
-            ],
-            [
                 'code' => 'las_vegas_3spot',
                 'name' => 'Las Vegas 3-Spot',
                 'image_path' => 'assets/images/targets/target_las_vegas_3spot.png',
@@ -221,58 +210,6 @@ class TargetFaceSeeder extends Seeder
                 'scoring_rules' => $fitaRules,
                 'organization_id' => $pordasi?->id,
             ],
-            [
-                'code' => 'pordasi_purwakarta_dewasa',
-                'name' => 'PORDASI PURWAKARTA - DEWASA',
-                'image_path' => 'https://storage.googleapis.com/manahpro-document/uploads/face_target/hi8KevXqyLc88SN6bH2fK7ogtGbMBXUwf5QNQBab.jpg',
-                'scoring_rules' => $twoRingRules,
-                'organization_id' => $pordasi?->id,
-            ],
-            [
-                'code' => 'fast_shooting_pordasi',
-                'name' => 'FAST SHOOTING - PORDASI',
-                'image_path' => 'https://storage.googleapis.com/manahpro-document/uploads/face%20target/10fe5c6d-88e2-470e-b4f6-8678d60ef82c.png',
-                'scoring_rules' => $fitaRules,
-                'organization_id' => $pordasi?->id,
-            ],
-            [
-                'code' => 'tameng_majapahit_kpbi',
-                'name' => 'TAMENG MAJAPAHIT - KPBI',
-                'image_path' => 'https://storage.googleapis.com/manahpro-document/uploads/face%20target/130b5562-e196-4e10-af0f-b0a6393df18b.png',
-                'scoring_rules' => $fitaRules,
-                'organization_id' => $kpbi?->id,
-            ],
-            [
-                'code' => 'gunungan_perdana',
-                'name' => 'Gunungan - PERDANA',
-                'image_path' => null,
-                'scoring_rules' => $fiveRingRules,
-                'organization_id' => null,
-            ],
-            [
-                'code' => 'hit_n_miss',
-                'name' => 'Hit n Miss',
-                'image_path' => null,
-                'scoring_rules' => [
-                    ['value' => 1, 'label' => 'Hit', 'color' => '#E53935'],
-                    ['value' => 0, 'label' => 'M', 'color' => '#E57373', 'is_miss' => true],
-                ],
-                'organization_id' => null,
-            ],
-            [
-                'code' => 'rajawali_kpbi',
-                'name' => 'RAJAWALI - KPBI',
-                'image_path' => 'https://storage.googleapis.com/manahpro-document/uploads/face%20target/70b282ab-5fff-4b07-b864-4221c7e420b2.jpg',
-                'scoring_rules' => $fitaRules,
-                'organization_id' => $kpbi?->id,
-            ],
-            [
-                'code' => 'gonjang_ganjing_kpbi',
-                'name' => 'GONJANG GANJING - KPBI',
-                'image_path' => 'https://storage.googleapis.com/manahpro-document/uploads/face%20target/9ee68d4d-0a8e-405b-947f-47502afe4923.png',
-                'scoring_rules' => $fitaRules,
-                'organization_id' => $kpbi?->id,
-            ],
         ];
 
         $usedCounts = [
@@ -289,13 +226,6 @@ class TargetFaceSeeder extends Seeder
             'pordasi_purwakarta_anak2' => 64,
             'pordasi_60x60' => 50,
             'pordasi_hexagon_horse' => 46,
-            'pordasi_purwakarta_dewasa' => 34,
-            'fast_shooting_pordasi' => 33,
-            'tameng_majapahit_kpbi' => 24,
-            'gunungan_perdana' => 23,
-            'hit_n_miss' => 11,
-            'rajawali_kpbi' => 10,
-            'gonjang_ganjing_kpbi' => 10,
         ];
 
         foreach ($targets as $t) {

@@ -31,7 +31,7 @@ class TargetFaceTest extends TestCase
 
         $response = $this->getJson('/api/v1/scoring/target-faces')
             ->assertOk()
-            ->assertJsonCount(26, 'data');
+            ->assertJsonCount(18, 'data');
 
         $data = $response->json('data');
 

@@ -3,7 +3,9 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Quote;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Passport\Passport;
 use Tests\TestCase;
 
 class QuoteTest extends TestCase
@@ -30,6 +32,36 @@ class QuoteTest extends TestCase
             ->assertJsonPath('data.0.author', 'Albert Einstein')
             ->assertJsonPath('meta.pagination.per_page', 1)
             ->assertJsonPath('meta.pagination.total', 1);
+    }
+
+    public function test_guest_can_sort_quotes_randomly_with_seed(): void
+    {
+        // Create 10 active quotes
+        Quote::factory()->count(10)->create(['is_active' => true]);
+
+        // Get random sorting with seed 123
+        $response1 = $this->getJson('/api/v1/quotes?sort=random&seed=123&per_page=10')
+            ->assertOk();
+
+        $ids1 = collect($response1->json('data'))->pluck('id')->all();
+
+        // Get random sorting with same seed 123
+        $response2 = $this->getJson('/api/v1/quotes?sort=random&seed=123&per_page=10')
+            ->assertOk();
+
+        $ids2 = collect($response2->json('data'))->pluck('id')->all();
+
+        // They must be identical because of the same seed
+        $this->assertEquals($ids1, $ids2);
+
+        // Get random sorting with different seed 456
+        $response3 = $this->getJson('/api/v1/quotes?sort=random&seed=456&per_page=10')
+            ->assertOk();
+
+        $ids3 = collect($response3->json('data'))->pluck('id')->all();
+
+        // They are highly likely to be different for different seeds
+        $this->assertNotEquals($ids1, $ids3);
     }
 
     public function test_guest_can_create_show_update_and_delete_quote(): void
@@ -61,8 +93,8 @@ class QuoteTest extends TestCase
 
     public function test_authenticated_user_can_love_and_unlove_quote(): void
     {
-        $user = \App\Models\User::factory()->create();
-        \Laravel\Passport\Passport::actingAs($user);
+        $user = User::factory()->create();
+        Passport::actingAs($user);
 
         $quote = Quote::factory()->create(['love_count' => 0]);
 
@@ -74,7 +106,7 @@ class QuoteTest extends TestCase
                 'data' => [
                     'loved' => true,
                     'love_count' => 1,
-                ]
+                ],
             ]);
 
         $this->assertDatabaseHas('quote_loves', [
@@ -91,7 +123,7 @@ class QuoteTest extends TestCase
                 'data' => [
                     'loved' => false,
                     'love_count' => 0,
-                ]
+                ],
             ]);
 
         $this->assertDatabaseMissing('quote_loves', [

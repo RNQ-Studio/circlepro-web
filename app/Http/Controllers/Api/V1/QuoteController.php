@@ -9,6 +9,7 @@ use App\Models\QuoteLove;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -26,16 +27,47 @@ class QuoteController extends Controller
             $base->withExists(['loves as is_loved' => fn ($q) => $q->where('user_id', $user->id)]);
         }
 
-        $quotes = QueryBuilder::for($base)
+        $sort = $request->input('sort');
+        $isRandom = ($sort === 'random' || $sort === '-random');
+
+        if ($isRandom) {
+            $seed = $request->input('seed');
+            if ($seed !== null) {
+                $driver = DB::connection()->getDriverName();
+                if ($driver === 'pgsql') {
+                    // Ensure seed is mapped to a float between -1.0 and 1.0 for Postgres setseed
+                    $hash = crc32((string) $seed);
+                    $floatSeed = ($hash / 4294967295.0) * 2.0 - 1.0;
+                    DB::statement('SELECT setseed('.(float) $floatSeed.')');
+                    $base->inRandomOrder();
+                } elseif ($driver === 'mysql') {
+                    $base->inRandomOrder($seed);
+                } else {
+                    $base->inRandomOrder();
+                }
+            } else {
+                $base->inRandomOrder();
+            }
+
+            // Clear sort parameter to prevent Spatie QueryBuilder from throwing an exception or overriding order
+            $request->query->remove('sort');
+            $request->request->remove('sort');
+        }
+
+        $builder = QueryBuilder::for($base)
             ->allowedFilters(
                 AllowedFilter::scope('search'),
                 AllowedFilter::partial('text'),
                 AllowedFilter::partial('author'),
                 AllowedFilter::exact('is_active'),
             )
-            ->allowedSorts('author', 'is_active', 'love_count', 'created_at', 'updated_at')
-            ->defaultSort('-created_at')
-            ->paginate($perPage)
+            ->allowedSorts('author', 'is_active', 'love_count', 'created_at', 'updated_at');
+
+        if (! $isRandom) {
+            $builder->defaultSort('-created_at');
+        }
+
+        $quotes = $builder->paginate($perPage)
             ->appends($request->query());
 
         return ApiResponse::success(QuoteResource::collection($quotes));

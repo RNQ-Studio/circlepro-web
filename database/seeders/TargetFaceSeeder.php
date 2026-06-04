@@ -275,7 +275,7 @@ class TargetFaceSeeder extends Seeder
             ],
         ];
 
-        $participantCounts = [
+        $usedCounts = [
             'perpatri_10ring' => 2275,
             '6ring_fespati' => 1400,
             'fetih_kupasi' => 593,
@@ -300,7 +300,7 @@ class TargetFaceSeeder extends Seeder
 
         foreach ($targets as $t) {
             $code = $t['code'];
-            $totalParticipants = $participantCounts[$code] ?? 0;
+            $usedCount = $usedCounts[$code] ?? 0;
             $existing = TargetFace::where('code', $code)->first();
             if ($existing) {
                 $existing->update([
@@ -308,7 +308,7 @@ class TargetFaceSeeder extends Seeder
                     'image_path' => $t['image_path'],
                     'scoring_rules' => $t['scoring_rules'],
                     'organization_id' => $t['organization_id'],
-                    'total_participants' => $totalParticipants,
+                    'used_count' => $usedCount,
                 ]);
             } else {
                 TargetFace::create([
@@ -317,7 +317,7 @@ class TargetFaceSeeder extends Seeder
                     'image_path' => $t['image_path'],
                     'scoring_rules' => $t['scoring_rules'],
                     'organization_id' => $t['organization_id'],
-                    'total_participants' => $totalParticipants,
+                    'used_count' => $usedCount,
                 ]);
             }
         }

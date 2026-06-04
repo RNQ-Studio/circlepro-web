@@ -37,8 +37,8 @@ class TargetFaceTest extends TestCase
 
         for ($i = 0; $i < count($data) - 1; $i++) {
             $this->assertTrue(
-                $data[$i]['total_participants'] >= $data[$i + 1]['total_participants'],
-                "Index {$i} ({$data[$i]['code']} count: {$data[$i]['total_participants']}) has fewer participants than index " . ($i + 1) . " ({$data[$i+1]['code']} count: {$data[$i+1]['total_participants']})"
+                $data[$i]['used_count'] >= $data[$i + 1]['used_count'],
+                "Index {$i} ({$data[$i]['code']} count: {$data[$i]['used_count']}) has fewer participants than index " . ($i + 1) . " ({$data[$i+1]['code']} count: {$data[$i+1]['used_count']})"
             );
         }
     }

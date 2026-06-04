@@ -27,7 +27,7 @@ class TargetFace extends Model
         'name',
         'image_path',
         'scoring_rules',
-        'total_participants',
+        'used_count',
     ];
 
     protected function casts(): array

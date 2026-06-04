@@ -27,7 +27,7 @@ class TargetFaceResource extends JsonResource
             'code' => $this->code,
             'name' => $this->name,
             'image_path' => $this->image_path,
-            'total_participants' => $this->total_participants,
+            'used_count' => $this->used_count,
             'scoring_rules' => $this->scoring_rules,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

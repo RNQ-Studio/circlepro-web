@@ -150,7 +150,7 @@ class TargetFaceSeeder extends Seeder
             [
                 'code' => 'bandul_merahkuningputih',
                 'name' => 'BANDUL MERAH KUNING PUTIH',
-                'image_path' => 'https://manah.umrah.pro/uploads/face_target/c4278fa0-dc2f-476e-966b-1d55afeed719.jpg',
+                'image_path' => 'https://storage.googleapis.com/manahpro-document/production/target-face/2026/06/8c688239-ffb7-42c7-a608-705dcb2c8597.jfif',
                 'scoring_rules' => [
                     ['value' => 3, 'label' => 'Merah (3)', 'color' => '#E53935'],
                     ['value' => 2, 'label' => 'Kuning (2)', 'color' => '#FFC107'],
@@ -231,11 +231,24 @@ class TargetFaceSeeder extends Seeder
         foreach ($targets as $t) {
             $code = $t['code'];
             $usedCount = $usedCounts[$code] ?? 0;
+
+            $imagePath = $t['image_path'];
+            if ($imagePath && ! str_starts_with($imagePath, 'http')) {
+                if (app()->runningUnitTests()) {
+                    $imagePath = 'http://localhost/storage/testing/' . basename($imagePath);
+                } else {
+                    $uploadedUrl = $this->uploadLocalFile($imagePath);
+                    if ($uploadedUrl) {
+                        $imagePath = $uploadedUrl;
+                    }
+                }
+            }
+
             $existing = TargetFace::where('code', $code)->first();
             if ($existing) {
                 $existing->update([
                     'name' => $t['name'],
-                    'image_path' => $t['image_path'],
+                    'image_path' => $imagePath,
                     'scoring_rules' => $t['scoring_rules'],
                     'organization_id' => $t['organization_id'],
                     'used_count' => $usedCount,
@@ -244,12 +257,46 @@ class TargetFaceSeeder extends Seeder
                 TargetFace::create([
                     'code' => $code,
                     'name' => $t['name'],
-                    'image_path' => $t['image_path'],
+                    'image_path' => $imagePath,
                     'scoring_rules' => $t['scoring_rules'],
                     'organization_id' => $t['organization_id'],
                     'used_count' => $usedCount,
                 ]);
             }
         }
+    }
+
+    private function uploadLocalFile(string $localPath): ?string
+    {
+        $fullPath = public_path($localPath);
+        if (! file_exists($fullPath)) {
+            return null;
+        }
+
+        $filename = basename($fullPath);
+        $existingAsset = \App\Models\Asset::where('original_filename', $filename)
+            ->where('status', \App\Support\Enums\AssetStatus::Active)
+            ->first();
+
+        if ($existingAsset) {
+            return $existingAsset->url;
+        }
+
+        $mime = mime_content_type($fullPath) ?: 'image/png';
+        $file = new \Illuminate\Http\UploadedFile(
+            path: $fullPath,
+            originalName: $filename,
+            mimeType: $mime,
+            error: null,
+            test: true
+        );
+
+        $asset = app(\App\Services\AssetUploadService::class)->upload(
+            file: $file,
+            type: 'target_face',
+            userId: null
+        );
+
+        return $asset->url;
     }
 }

@@ -3,7 +3,6 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Badge;
-use App\Models\ScoringSession;
 use App\Models\User;
 use App\Support\Enums\ScoringSessionStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,7 +15,9 @@ class GamificationTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Badge $levelBadge;
+
     private Badge $sessionBadge;
 
     protected function setUp(): void
@@ -75,7 +76,7 @@ class GamificationTest extends TestCase
                         ['arrow_index' => 1, 'score_value' => 9],
                         ['arrow_index' => 2, 'score_value' => 10, 'is_x' => true],
                         ['arrow_index' => 3, 'score_value' => 8],
-                    ]
+                    ],
                 ],
                 [
                     'end_number' => 2,
@@ -83,7 +84,7 @@ class GamificationTest extends TestCase
                         ['arrow_index' => 1, 'score_value' => 10],
                         ['arrow_index' => 2, 'score_value' => 9],
                         ['arrow_index' => 3, 'score_value' => 9],
-                    ]
+                    ],
                 ],
                 [
                     'end_number' => 3,
@@ -91,7 +92,7 @@ class GamificationTest extends TestCase
                         ['arrow_index' => 1, 'score_value' => 8],
                         ['arrow_index' => 2, 'score_value' => 7],
                         ['arrow_index' => 3, 'score_value' => 0, 'is_miss' => true],
-                    ]
+                    ],
                 ],
                 [
                     'end_number' => 4,
@@ -99,8 +100,8 @@ class GamificationTest extends TestCase
                         ['arrow_index' => 1, 'score_value' => 9],
                         ['arrow_index' => 2, 'score_value' => 8],
                         ['arrow_index' => 3, 'score_value' => 9],
-                    ]
-                ]
+                    ],
+                ],
             ],
             'started_at' => Carbon::now()->toIso8601String(),
             'completed_at' => Carbon::now()->toIso8601String(),
@@ -141,7 +142,7 @@ class GamificationTest extends TestCase
                     ['arrow_index' => 1, 'score_value' => 10],
                     ['arrow_index' => 2, 'score_value' => 10],
                     ['arrow_index' => 3, 'score_value' => 10],
-                ]
+                ],
             ];
         }
 

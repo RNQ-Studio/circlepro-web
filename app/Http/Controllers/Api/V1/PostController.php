@@ -35,13 +35,13 @@ class PostController extends Controller
         }
 
         $base->where(function (Builder $q) use ($userId, $myClubIds): void {
-                $q->where('visibility', PostVisibility::Public->value)
-                    ->orWhere('author_id', $userId)
-                    ->orWhere(function (Builder $club) use ($myClubIds): void {
-                        $club->where('visibility', PostVisibility::Club->value)
-                            ->whereIn('organization_id', $myClubIds);
-                    });
-            })
+            $q->where('visibility', PostVisibility::Public->value)
+                ->orWhere('author_id', $userId)
+                ->orWhere(function (Builder $club) use ($myClubIds): void {
+                    $club->where('visibility', PostVisibility::Club->value)
+                        ->whereIn('organization_id', $myClubIds);
+                });
+        })
             ->with('author.profile')
             ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $userId)]);
 

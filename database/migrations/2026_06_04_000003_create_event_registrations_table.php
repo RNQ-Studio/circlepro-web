@@ -23,7 +23,7 @@ return new class extends Migration
 
             // Prevent duplicate registration for the same user in the same division
             $table->unique(['user_id', 'event_division_id'], 'user_division_unique');
-            
+
             $table->index('status');
             $table->index('qr_code');
         });

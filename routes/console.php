@@ -12,4 +12,3 @@ Artisan::command('inspire', function () {
 Schedule::command('assets:soft-delete-expired')->dailyAt('01:00')->withoutOverlapping();
 Schedule::command('assets:hard-delete-expired')->dailyAt('02:00')->withoutOverlapping();
 Schedule::command('stories:clean-expired')->hourly()->withoutOverlapping();
-

@@ -23,7 +23,7 @@ class EventScoringController extends Controller
     /** Assign target butts and letters to participants (organizer only). */
     public function assignTargets(Request $request, Event $event): JsonResponse
     {
-        if (!$this->eventService->canManage($request->user(), $event)) {
+        if (! $this->eventService->canManage($request->user(), $event)) {
             return ApiResponse::error('Unauthorized to assign targets.', 403);
         }
 
@@ -37,7 +37,7 @@ class EventScoringController extends Controller
         DB::transaction(function () use ($request): void {
             foreach ($request->input('assignments') as $assign) {
                 $registration = EventRegistration::query()->findOrFail($assign['registration_id']);
-                
+
                 // Update target assignments
                 $registration->update([
                     'target_butt' => $assign['target_butt'],
@@ -102,7 +102,7 @@ class EventScoringController extends Controller
         int $target_butt,
         int $end_number
     ): JsonResponse {
-        if (!$this->eventService->canManage($request->user(), $event)) {
+        if (! $this->eventService->canManage($request->user(), $event)) {
             return ApiResponse::error('Unauthorized to input scores.', 403);
         }
 
@@ -209,14 +209,14 @@ class EventScoringController extends Controller
                 'avg_per_arrow' => $session->avg_per_arrow,
             ];
         })
-        ->sortBy([
-            ['total_score', 'desc'],
-            ['x_count', 'desc'],
-            ['ten_count', 'desc'],
-            ['miss_count', 'asc'],
-        ])
-        ->values()
-        ->all();
+            ->sortBy([
+                ['total_score', 'desc'],
+                ['x_count', 'desc'],
+                ['ten_count', 'desc'],
+                ['miss_count', 'asc'],
+            ])
+            ->values()
+            ->all();
 
         return ApiResponse::success($leaderboard);
     }

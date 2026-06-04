@@ -60,6 +60,7 @@ class FollowController extends Controller
     public function followers(User $user): JsonResponse
     {
         $followers = $user->followers()->with('profile')->get();
+
         return ApiResponse::success(ProfileResource::collection($followers));
     }
 
@@ -69,6 +70,7 @@ class FollowController extends Controller
     public function following(User $user): JsonResponse
     {
         $following = $user->followings()->with('profile')->get();
+
         return ApiResponse::success(ProfileResource::collection($following));
     }
 }

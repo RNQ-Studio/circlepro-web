@@ -14,9 +14,6 @@ class GamificationController extends Controller
 {
     /**
      * Get the user's gamification stats and badge unlock status.
-     *
-     * @param Request $request
-     * @return JsonResponse
      */
     public function stats(Request $request): JsonResponse
     {
@@ -43,6 +40,7 @@ class GamificationController extends Controller
         // Get all badges and flag if unlocked
         $allBadges = Badge::query()->get()->map(function ($badge) use ($unlockedBadges) {
             $isUnlocked = array_key_exists($badge->id, $unlockedBadges);
+
             return [
                 'id' => $badge->id,
                 'name' => $badge->name,

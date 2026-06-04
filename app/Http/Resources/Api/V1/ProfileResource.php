@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\Follow;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -26,7 +27,7 @@ class ProfileResource extends JsonResource
         $auth = $request->user('api') ?? $request->user();
         $isFollowing = false;
         if ($auth && $auth->id !== $this->id) {
-            $isFollowing = \App\Models\Follow::where('follower_id', $auth->id)
+            $isFollowing = Follow::where('follower_id', $auth->id)
                 ->where('followee_id', $this->id)
                 ->exists();
         }
@@ -52,8 +53,8 @@ class ProfileResource extends JsonResource
             'rating' => null, // national ranking lands in Phase 3
             'stats' => $this->stats,
             'is_following' => $isFollowing,
-            'followers_count' => \App\Models\Follow::where('followee_id', $this->id)->count(),
-            'following_count' => \App\Models\Follow::where('follower_id', $this->id)->count(),
+            'followers_count' => Follow::where('followee_id', $this->id)->count(),
+            'following_count' => Follow::where('follower_id', $this->id)->count(),
         ];
     }
 }

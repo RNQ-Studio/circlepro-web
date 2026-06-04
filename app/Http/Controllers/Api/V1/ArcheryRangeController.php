@@ -18,17 +18,17 @@ class ArcheryRangeController extends Controller
         $filters = $request->input('filter', []);
 
         // 1. Search filter (name, city, province)
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $term = $filters['search'];
             $query->where(function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%")
-                  ->orWhere('city', 'like', "%{$term}%")
-                  ->orWhere('province', 'like', "%{$term}%");
+                    ->orWhere('city', 'like', "%{$term}%")
+                    ->orWhere('province', 'like', "%{$term}%");
             });
         }
 
         // 2. Facility filter
-        if (!empty($filters['facility'])) {
+        if (! empty($filters['facility'])) {
             $facility = $filters['facility'];
             if (\DB::connection()->getDriverName() === 'sqlite') {
                 $query->where('facilities', 'like', "%{$facility}%");
@@ -53,6 +53,7 @@ class ArcheryRangeController extends Controller
                     } else {
                         $item->distance = null;
                     }
+
                     return $item;
                 })->sortBy('distance')->values();
 
@@ -66,16 +67,18 @@ class ArcheryRangeController extends Controller
             } else {
                 // Production database (MySQL/PostgreSQL) calculation
                 $query->selectRaw(
-                    "*, (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance",
+                    '*, (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance',
                     [$lat, $lng, $lat]
                 )->orderBy('distance', 'asc');
 
                 $ranges = $query->paginate($perPage);
+
                 return ApiResponse::success(ArcheryRangeResource::collection($ranges));
             }
         }
 
         $ranges = $query->paginate($perPage);
+
         return ApiResponse::success(ArcheryRangeResource::collection($ranges));
     }
 
@@ -131,6 +134,7 @@ class ArcheryRangeController extends Controller
     public function destroy(ArcheryRange $range): JsonResponse
     {
         $range->delete();
+
         return ApiResponse::success(null, 'Lapangan panahan berhasil dihapus.');
     }
 
@@ -143,6 +147,7 @@ class ArcheryRangeController extends Controller
              cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
              sin($lonDelta / 2) * sin($lonDelta / 2);
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
         return $earthRadius * $c;
     }
 }

@@ -5,9 +5,11 @@ namespace Tests\Feature\Api;
 use App\Models\Asset;
 use App\Models\Story;
 use App\Models\User;
+use App\Services\AssetUploadService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -77,10 +79,10 @@ class StoryTest extends TestCase
                 '*' => [
                     'user' => ['id', 'full_name', 'username', 'avatar_url'],
                     'stories' => [
-                        '*' => ['id', 'media_type', 'media_url', 'expires_at', 'created_at']
-                    ]
-                ]
-            ]
+                        '*' => ['id', 'media_type', 'media_url', 'expires_at', 'created_at'],
+                    ],
+                ],
+            ],
         ]);
     }
 
@@ -137,7 +139,7 @@ class StoryTest extends TestCase
         $this->deleteJson("/api/v1/stories/{$storyId}")->assertOk();
 
         $this->assertDatabaseMissing('stories', ['id' => $storyId]);
-        
+
         // Status asset harus hard_deleted & file di GCS harus terhapus
         $asset->refresh();
         $this->assertSame('hard_deleted', $asset->status->value);
@@ -151,7 +153,7 @@ class StoryTest extends TestCase
 
         // Buat asset & story yang kedaluwarsa
         $file = UploadedFile::fake()->image('expired_story.jpg');
-        $asset = app(\App\Services\AssetUploadService::class)->upload(
+        $asset = app(AssetUploadService::class)->upload(
             file: $file,
             type: 'story',
             userId: $user->id,
@@ -159,7 +161,7 @@ class StoryTest extends TestCase
         );
 
         $story = Story::query()->create([
-            'id' => \Illuminate\Support\Str::ulid(),
+            'id' => Str::ulid(),
             'user_id' => $user->id,
             'asset_id' => $asset->id,
             'media_type' => 'image',

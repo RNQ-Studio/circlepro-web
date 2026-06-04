@@ -17,8 +17,11 @@ class ClubScheduleAndAttendanceTest extends TestCase
     use RefreshDatabase;
 
     private Organization $club;
+
     private User $owner;
+
     private User $member;
+
     private User $nonMember;
 
     protected function setUp(): void
@@ -178,8 +181,8 @@ class ClubScheduleAndAttendanceTest extends TestCase
                     'user_id' => $this->owner->id,
                     'status' => 'excused',
                     'remark' => 'Mengawasi latihan saja',
-                ]
-            ]
+                ],
+            ],
         ])->assertOk();
 
         $this->assertDatabaseHas('club_attendances', [
@@ -192,7 +195,7 @@ class ClubScheduleAndAttendanceTest extends TestCase
         // 3. Non-admin attempts to save attendance
         Passport::actingAs($this->member);
         $this->postJson("/api/v1/clubs/{$this->club->id}/schedules/{$schedule->id}/attendance", [
-            'attendances' => []
+            'attendances' => [],
         ])->assertForbidden();
     }
 

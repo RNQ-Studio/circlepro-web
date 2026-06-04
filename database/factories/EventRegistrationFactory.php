@@ -23,8 +23,8 @@ class EventRegistrationFactory extends Factory
             'event_division_id' => EventDivision::factory(),
             'user_id' => User::factory(),
             'status' => RegistrationStatus::Confirmed,
-            'bib_number' => 'BIB-' . fake()->unique()->bothify('??-###'),
-            'qr_code' => 'REG-' . Str::random(10) . '-' . strtoupper(Str::random(4)),
+            'bib_number' => 'BIB-'.fake()->unique()->bothify('??-###'),
+            'qr_code' => 'REG-'.Str::random(10).'-'.strtoupper(Str::random(4)),
             'checked_in_at' => null,
         ];
     }

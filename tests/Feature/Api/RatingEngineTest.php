@@ -14,6 +14,7 @@ use App\Models\RatingPeriod;
 use App\Models\ScoringSession;
 use App\Models\User;
 use App\Models\UserProfile;
+use App\Services\RatingEngine;
 use App\Support\Enums\AgeGroup;
 use App\Support\Enums\BowClass;
 use App\Support\Enums\DistanceCategory;
@@ -21,13 +22,10 @@ use App\Support\Enums\EventFormat;
 use App\Support\Enums\EventTier;
 use App\Support\Enums\Gender;
 use App\Support\Enums\MemberRole;
-use App\Support\Enums\RegistrationStatus;
-use App\Support\Enums\ScoringSessionStatus;
-use App\Support\Enums\RatingStatus;
 use App\Support\Enums\RatingPeriodStatus;
-use App\Services\RatingEngine;
+use App\Support\Enums\RatingStatus;
+use App\Support\Enums\ScoringSessionStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Laravel\Passport\Passport;
 use Tests\TestCase;
 
@@ -36,9 +34,13 @@ class RatingEngineTest extends TestCase
     use RefreshDatabase;
 
     private User $organizer;
+
     private Organization $org;
+
     private Event $event;
+
     private EventDivision $division;
+
     private RatingEngine $ratingEngine;
 
     protected function setUp(): void
@@ -49,7 +51,7 @@ class RatingEngineTest extends TestCase
 
         $this->organizer = User::factory()->create();
         $this->org = Organization::factory()->create(['slug' => 'manahpro']);
-        
+
         OrganizationMember::query()->create([
             'organization_id' => $this->org->id,
             'user_id' => $this->organizer->id,
@@ -138,7 +140,7 @@ class RatingEngineTest extends TestCase
             // Retrieve rating to check Glicko-2 dynamics
             $rating = Rating::where('user_id', $athlete->id)->first();
             $this->assertNotNull($rating);
-            
+
             // For B-tier event, check Glicko-2 updates
             // Since athletes A > B > C, their post-event mu should be ordered as A > B > C
             // Also assert history table logged it
@@ -171,7 +173,7 @@ class RatingEngineTest extends TestCase
             'max_display_rating' => 1600,
             'sort_order' => 1,
         ]);
-        
+
         RatingBand::create([
             'title' => 'Novice Archer',
             'badge' => 'Novice',
@@ -182,7 +184,7 @@ class RatingEngineTest extends TestCase
         ]);
 
         $users = User::factory()->count(4)->create();
-        
+
         // Profiles
         UserProfile::create(['user_id' => $users[0]->id, 'province' => 'Jawa Barat', 'city' => 'Bandung']);
         UserProfile::create(['user_id' => $users[1]->id, 'province' => 'Jawa Barat', 'city' => 'Bogor']);
@@ -247,37 +249,37 @@ class RatingEngineTest extends TestCase
         ]);
 
         // 1. Check complete leaderboard sorting (Recurve, Male, Dewasa, 70m)
-        $response = $this->getJson('/api/v1/leaderboard?' . http_build_query([
+        $response = $this->getJson('/api/v1/leaderboard?'.http_build_query([
             'bow_class' => BowClass::Recurve->value,
             'gender' => Gender::Male->value,
             'age_group' => AgeGroup::Dewasa->value,
             'distance_category' => DistanceCategory::D70m->value,
         ]))
-        ->assertOk()
-        ->assertJsonCount(3, 'data');
+            ->assertOk()
+            ->assertJsonCount(3, 'data');
 
         // Check sort order (1500 -> 1200 -> 900)
         $response->assertJsonPath('data.0.user_id', $users[0]->id)
-                 ->assertJsonPath('data.0.title', 'Expert Archer')
-                 ->assertJsonPath('data.1.user_id', $users[1]->id)
-                 ->assertJsonPath('data.2.user_id', $users[2]->id)
-                 ->assertJsonPath('data.2.title', 'Novice Archer');
+            ->assertJsonPath('data.0.title', 'Expert Archer')
+            ->assertJsonPath('data.1.user_id', $users[1]->id)
+            ->assertJsonPath('data.2.user_id', $users[2]->id)
+            ->assertJsonPath('data.2.title', 'Novice Archer');
 
         // 2. Check Province Filter (Jawa Barat)
-        $this->getJson('/api/v1/leaderboard?' . http_build_query([
+        $this->getJson('/api/v1/leaderboard?'.http_build_query([
             'bow_class' => BowClass::Recurve->value,
             'gender' => Gender::Male->value,
             'age_group' => AgeGroup::Dewasa->value,
             'distance_category' => DistanceCategory::D70m->value,
             'province' => 'Jawa Barat',
         ]))
-        ->assertOk()
-        ->assertJsonCount(2, 'data')
-        ->assertJsonPath('data.0.user_id', $users[0]->id)
-        ->assertJsonPath('data.1.user_id', $users[1]->id);
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.user_id', $users[0]->id)
+            ->assertJsonPath('data.1.user_id', $users[1]->id);
 
         // 3. Check City Filter (Bandung)
-        $this->getJson('/api/v1/leaderboard?' . http_build_query([
+        $this->getJson('/api/v1/leaderboard?'.http_build_query([
             'bow_class' => BowClass::Recurve->value,
             'gender' => Gender::Male->value,
             'age_group' => AgeGroup::Dewasa->value,
@@ -285,15 +287,15 @@ class RatingEngineTest extends TestCase
             'province' => 'Jawa Barat',
             'city' => 'Bandung',
         ]))
-        ->assertOk()
-        ->assertJsonCount(1, 'data')
-        ->assertJsonPath('data.0.user_id', $users[0]->id);
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.user_id', $users[0]->id);
     }
 
     public function test_user_ratings_and_history_endpoints(): void
     {
         $athlete = User::factory()->create();
-        
+
         $rating = Rating::create([
             'organization_id' => $this->org->id,
             'user_id' => $athlete->id,
@@ -351,7 +353,7 @@ class RatingEngineTest extends TestCase
 
         // Get my ratings (authenticated)
         Passport::actingAs($athlete);
-        $this->getJson("/api/v1/my-ratings")
+        $this->getJson('/api/v1/my-ratings')
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $rating->id);
@@ -360,7 +362,7 @@ class RatingEngineTest extends TestCase
     public function test_monthly_decay(): void
     {
         $athlete = User::factory()->create();
-        
+
         $rating = Rating::create([
             'organization_id' => $this->org->id,
             'user_id' => $athlete->id,
@@ -381,7 +383,7 @@ class RatingEngineTest extends TestCase
 
         // Refresh rating and verify decay applied
         $rating->refresh();
-        
+
         $this->assertEquals(1600.0, $rating->mu); // internal mu remains same
         $this->assertTrue($rating->phi > 100.0); // uncertainty increased
         $this->assertTrue($rating->display_rating < 1400.0); // display rating decreased

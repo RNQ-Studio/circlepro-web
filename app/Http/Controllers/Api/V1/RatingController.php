@@ -37,7 +37,7 @@ class RatingController extends Controller
             return ApiResponse::error('Divisi tidak cocok dengan event.', 404);
         }
 
-        if (!$this->eventService->canManage($request->user(), $event)) {
+        if (! $this->eventService->canManage($request->user(), $event)) {
             return ApiResponse::error('Unauthorized to finalize ratings.', 403);
         }
 
@@ -66,12 +66,12 @@ class RatingController extends Controller
         ]);
 
         $orgId = $validated['organization_id'] ?? null;
-        if (!$orgId) {
+        if (! $orgId) {
             $platformOrg = Organization::where('slug', 'manahpro')->first();
             $orgId = $platformOrg?->id;
         }
 
-        if (!$orgId) {
+        if (! $orgId) {
             return ApiResponse::error('Platform organization not found.', 500);
         }
 
@@ -84,13 +84,13 @@ class RatingController extends Controller
             ->where('status', '!=', 'inactive')
             ->with(['user.profile', 'organization']);
 
-        if (!empty($validated['province'])) {
+        if (! empty($validated['province'])) {
             $query->whereHas('user.profile', function ($q) use ($validated) {
                 $q->where('province', $validated['province']);
             });
         }
 
-        if (!empty($validated['city'])) {
+        if (! empty($validated['city'])) {
             $query->whereHas('user.profile', function ($q) use ($validated) {
                 $q->where('city', $validated['city']);
             });

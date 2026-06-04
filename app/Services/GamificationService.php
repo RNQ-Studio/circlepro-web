@@ -13,11 +13,6 @@ class GamificationService
 {
     /**
      * Record session completion and reward XP/streaks/badges.
-     *
-     * @param User $user
-     * @param int $arrowCount
-     * @param bool $isPersonalBest
-     * @return array
      */
     public function recordSessionCompletion(User $user, int $arrowCount, bool $isPersonalBest): array
     {

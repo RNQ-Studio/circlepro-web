@@ -9,7 +9,6 @@ use App\Models\RatingHistory;
 use App\Models\RatingPeriod;
 use App\Models\ScoringSession;
 use App\Support\Enums\AgeGroup;
-use App\Support\Enums\BowClass;
 use App\Support\Enums\DistanceCategory;
 use App\Support\Enums\EventTier;
 use App\Support\Enums\Gender;
@@ -28,7 +27,7 @@ class RatingEngine
     {
         DB::transaction(function () use ($division) {
             $event = $division->event;
-            
+
             // 1. Gather checked-in participants with completed scoring sessions
             $registrations = $division->registrations()
                 ->where('status', 'checked_in')
@@ -59,6 +58,7 @@ class RatingEngine
                     'rating_status' => 'rated',
                     'sof_avg_rating' => 1500.00,
                 ]);
+
                 return;
             }
 
@@ -73,6 +73,7 @@ class RatingEngine
                 if ($a['session']->ten_count !== $b['session']->ten_count) {
                     return $b['session']->ten_count <=> $a['session']->ten_count;
                 }
+
                 return $a['session']->miss_count <=> $b['session']->miss_count;
             });
 
@@ -97,7 +98,7 @@ class RatingEngine
             // We lock ratings to prevent concurrent modifications
             $ratings = [];
             $sofSum = 0;
-            
+
             $genderVal = Gender::Male; // Default fallback
             if ($division->gender) {
                 $genderVal = $division->gender;
@@ -123,7 +124,7 @@ class RatingEngine
                     'distance_category' => $distVal,
                 ])->lockForUpdate()->first();
 
-                if (!$rating) {
+                if (! $rating) {
                     $rating = new Rating([
                         'organization_id' => $orgId,
                         'user_id' => $p['user_id'],
@@ -191,7 +192,7 @@ class RatingEngine
                 for ($j = 0; $j < count($opponents); $j++) {
                     $g = 1.0 / sqrt(1.0 + 3.0 * pow($opponents[$j]['phi'], 2) / pow(pi(), 2));
                     $e = 1.0 / (1.0 + exp(-$g * ($mu - $opponents[$j]['mu'])));
-                    
+
                     $gValues[] = $g;
                     $eValues[] = $e;
                 }
@@ -201,7 +202,7 @@ class RatingEngine
                 for ($j = 0; $j < count($opponents); $j++) {
                     $vInv += pow($gValues[$j], 2) * $eValues[$j] * (1.0 - $eValues[$j]);
                 }
-                
+
                 // If vInv is zero (all outcomes are extreme/identical), fallback to a small variance bound
                 $v = $vInv > 0 ? (1.0 / $vInv) : 1000.0;
 
@@ -218,6 +219,7 @@ class RatingEngine
                     $ex = exp($x);
                     $num = $ex * (pow($delta, 2) - pow($phi, 2) - $v - $ex);
                     $den = 2.0 * pow(pow($phi, 2) + $v + $ex, 2);
+
                     return ($num / $den) - (($x - $a) / pow($tau, 2));
                 };
 
@@ -236,7 +238,7 @@ class RatingEngine
 
                 $fA = $f($A);
                 $fB = $f($B);
-                
+
                 $maxIterations = 50;
                 $iterations = 0;
                 $C = $A;
@@ -244,14 +246,14 @@ class RatingEngine
                 while (abs($B - $A) > 0.000001 && $iterations < $maxIterations) {
                     $C = $A + ($A - $B) * $fA / ($fB - $fA);
                     $fC = $f($C);
-                    
+
                     if ($fC * $fB < 0) {
                         $A = $B;
                         $fA = $fB;
                     } else {
                         $fA = $fA / 2.0;
                     }
-                    
+
                     $B = $C;
                     $fB = $fC;
                     $iterations++;
@@ -264,7 +266,7 @@ class RatingEngine
 
                 // Glicko-2 Step 7: Update rating deviation and rating
                 $newPhi = 1.0 / sqrt((1.0 / pow($phiStar, 2)) + (1.0 / $v));
-                
+
                 $muChangeSum = 0.0;
                 for ($j = 0; $j < count($opponents); $j++) {
                     $muChangeSum += $gValues[$j] * ($outcomes[$j] - $eValues[$j]);
@@ -291,11 +293,16 @@ class RatingEngine
                         $tierVal = $tierVal->value;
                     }
                     switch ($tierVal) {
-                        case 'S': $tMult = 1.5; break;
-                        case 'A': $tMult = 1.2; break;
-                        case 'B': $tMult = 1.0; break;
-                        case 'C': $tMult = 0.7; break;
-                        case 'D': $tMult = 0.4; break;
+                        case 'S': $tMult = 1.5;
+                            break;
+                        case 'A': $tMult = 1.2;
+                            break;
+                        case 'B': $tMult = 1.0;
+                            break;
+                        case 'C': $tMult = 0.7;
+                            break;
+                        case 'D': $tMult = 0.4;
+                            break;
                     }
                 }
 
@@ -307,10 +314,14 @@ class RatingEngine
                 if ($event->format) {
                     $formatVal = $event->format;
                     switch ($formatVal) {
-                        case 'ranking_round': $fMult = 1.0; break;
-                        case 'half_round': $fMult = 0.7; break;
-                        case 'match_play': $fMult = 0.9; break;
-                        case 'elimination': $fMult = 0.8; break;
+                        case 'ranking_round': $fMult = 1.0;
+                            break;
+                        case 'half_round': $fMult = 0.7;
+                            break;
+                        case 'match_play': $fMult = 0.9;
+                            break;
+                        case 'elimination': $fMult = 0.8;
+                            break;
                     }
                 }
 
@@ -357,7 +368,7 @@ class RatingEngine
                 $displayBefore = $currRating->display_rating;
 
                 $newEventsCount = $currRating->events_count + 1;
-                
+
                 // Determine new status based on count of rated events
                 $newStatus = RatingStatus::Provisional;
                 if ($newEventsCount >= 10) {
@@ -424,7 +435,7 @@ class RatingEngine
     {
         DB::transaction(function () use ($org, $date) {
             $periodMonth = $date->copy()->startOfMonth();
-            
+
             // Find or create the period record
             $period = RatingPeriod::firstOrCreate(
                 ['organization_id' => $org->id, 'period_month' => $periodMonth],
@@ -450,7 +461,7 @@ class RatingEngine
 
             foreach ($ratings as $rating) {
                 $phiBefore = $rating->phi;
-                
+
                 // Calculate months inactive
                 $lastEvent = $rating->last_event_date ?? $rating->created_at;
                 $monthsInactive = $lastEvent->diffInMonths($periodMonth);

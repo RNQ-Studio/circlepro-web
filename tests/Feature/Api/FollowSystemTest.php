@@ -147,10 +147,22 @@ class FollowSystemTest extends TestCase
 
         Passport::actingAs($user);
 
-        // Create posts
-        $postSelf = Post::factory()->create(['author_id' => $user->id, 'body' => 'Self Post']);
-        $postFollowed = Post::factory()->create(['author_id' => $followed->id, 'body' => 'Followed Post']);
-        $postUnfollowed = Post::factory()->create(['author_id' => $unfollowed->id, 'body' => 'Unfollowed Post']);
+        // Create posts with distinct timestamps for deterministic sorting
+        $postSelf = Post::factory()->create([
+            'author_id' => $user->id,
+            'body' => 'Self Post',
+            'created_at' => now()->subMinutes(10),
+        ]);
+        $postFollowed = Post::factory()->create([
+            'author_id' => $followed->id,
+            'body' => 'Followed Post',
+            'created_at' => now(),
+        ]);
+        $postUnfollowed = Post::factory()->create([
+            'author_id' => $unfollowed->id,
+            'body' => 'Unfollowed Post',
+            'created_at' => now()->subMinutes(20),
+        ]);
 
         // Default feed (global/all)
         $this->getJson('/api/v1/posts')

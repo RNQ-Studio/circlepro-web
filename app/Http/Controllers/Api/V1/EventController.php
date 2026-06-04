@@ -64,7 +64,7 @@ class EventController extends Controller
     /** Update the specified event. */
     public function update(UpdateEventRequest $request, Event $event): JsonResponse
     {
-        if (!$this->eventService->canManage($request->user(), $event)) {
+        if (! $this->eventService->canManage($request->user(), $event)) {
             return ApiResponse::error('Unauthorized to manage this event', 403);
         }
 
@@ -79,7 +79,7 @@ class EventController extends Controller
     /** Remove the specified event. */
     public function destroy(Request $request, Event $event): JsonResponse
     {
-        if (!$this->eventService->canManage($request->user(), $event)) {
+        if (! $this->eventService->canManage($request->user(), $event)) {
             return ApiResponse::error('Unauthorized to manage this event', 403);
         }
 

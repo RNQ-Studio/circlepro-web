@@ -6,6 +6,7 @@ use App\Support\Enums\AgeGroup;
 use App\Support\Enums\BowClass;
 use App\Support\Enums\DistanceCategory;
 use App\Support\Enums\Gender;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,7 +33,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Event $event
- * @property-read \Illuminate\Database\Eloquent\Collection<int, EventRegistration> $registrations
+ * @property-read Collection<int, EventRegistration> $registrations
  */
 class EventDivision extends Model
 {

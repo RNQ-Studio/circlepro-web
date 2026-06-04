@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ClubScheduleResource;
 use App\Models\ClubSchedule;
 use App\Models\Organization;
+use App\Models\User;
 use App\Services\ClubService;
 use App\Support\ApiResponse;
 use App\Support\Enums\OrganizationType;
@@ -112,12 +113,12 @@ class ClubScheduleController extends Controller
         abort_unless($club->type === OrganizationType::Club, 404, 'Club not found.');
     }
 
-    private function ensureAdmin(\App\Models\User $user, Organization $club): void
+    private function ensureAdmin(User $user, Organization $club): void
     {
         abort_unless($this->clubs->isAdmin($user, $club), 403, 'Admin role required.');
     }
 
-    private function ensureMember(\App\Models\User $user, Organization $club): void
+    private function ensureMember(User $user, Organization $club): void
     {
         abort_unless($this->clubs->membershipOf($user, $club) !== null, 403, 'Club membership required.');
     }

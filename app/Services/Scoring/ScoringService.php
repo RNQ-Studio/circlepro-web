@@ -5,6 +5,7 @@ namespace App\Services\Scoring;
 use App\Models\PersonalBest;
 use App\Models\ScoringSession;
 use App\Models\User;
+use App\Services\GamificationService;
 use App\Support\Enums\ScoringSessionStatus;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -71,14 +72,14 @@ class ScoringService
                 $this->evaluatePersonalBest($session);
 
                 try {
-                    $gamification = app(\App\Services\GamificationService::class);
+                    $gamification = app(GamificationService::class);
                     $gamification->recordSessionCompletion(
                         $user,
                         $session->arrows_shot,
                         (bool) $session->is_personal_best
                     );
                 } catch (\Exception $e) {
-                    \Log::error("Gamification reward error: " . $e->getMessage());
+                    \Log::error('Gamification reward error: '.$e->getMessage());
                 }
             }
 

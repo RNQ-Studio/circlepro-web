@@ -29,10 +29,10 @@ class CleanExpiredStories extends Command
                             $assetDeletionService->hardDelete($story->asset);
                         } catch (\Throwable $e) {
                             $this->error("Gagal menghapus asset story {$story->id}: {$e->getMessage()}");
-                            Log::error("stories:clean-expired asset deletion failed", [
+                            Log::error('stories:clean-expired asset deletion failed', [
                                 'story_id' => $story->id,
                                 'asset_id' => $story->asset_id,
-                                'error' => $e->getMessage()
+                                'error' => $e->getMessage(),
                             ]);
                         }
                     }
@@ -42,7 +42,7 @@ class CleanExpiredStories extends Command
             });
 
         $this->info("Successfully cleaned {$processed} expired story/stories.");
-        Log::info("stories:clean-expired completed", ['processed' => $processed]);
+        Log::info('stories:clean-expired completed', ['processed' => $processed]);
 
         return self::SUCCESS;
     }

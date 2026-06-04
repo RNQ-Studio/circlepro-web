@@ -19,8 +19,7 @@ class CoachController extends Controller
 
         $filters = $request->input('filter', []);
 
-
-        if (!empty($filters['specialty'])) {
+        if (! empty($filters['specialty'])) {
             $specialty = $filters['specialty'];
             if (\DB::connection()->getDriverName() === 'sqlite') {
                 $query->where('specialties', 'like', "%{$specialty}%");
@@ -30,24 +29,22 @@ class CoachController extends Controller
 
         }
 
-        if (!empty($filters['city'])) {
+        if (! empty($filters['city'])) {
             $city = $filters['city'];
             $query->whereHas('user.profile', function ($q) use ($city) {
                 $q->where('city', 'like', "%{$city}%");
             });
         }
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $term = $filters['search'];
             $query->whereHas('user', function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%")
-                  ->orWhereHas('profile', function ($qp) use ($term) {
-                      $qp->where('full_name', 'like', "%{$term}%");
-                  });
+                    ->orWhereHas('profile', function ($qp) use ($term) {
+                        $qp->where('full_name', 'like', "%{$term}%");
+                    });
             });
         }
-
-
 
         $perPage = min(max((int) $request->integer('per_page', 15), 1), 100);
         $coaches = $query->paginate($perPage);

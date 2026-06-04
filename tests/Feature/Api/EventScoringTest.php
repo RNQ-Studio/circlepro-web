@@ -7,8 +7,6 @@ use App\Models\EventDivision;
 use App\Models\EventRegistration;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
-use App\Models\ScoringArrow;
-use App\Models\ScoringEnd;
 use App\Models\ScoringSession;
 use App\Models\User;
 use App\Support\Enums\AgeGroup;
@@ -28,11 +26,17 @@ class EventScoringTest extends TestCase
     use RefreshDatabase;
 
     private User $organizer;
+
     private User $athleteA;
+
     private User $athleteB;
+
     private Event $event;
+
     private EventDivision $division;
+
     private EventRegistration $regA;
+
     private EventRegistration $regB;
 
     protected function setUp(): void
@@ -100,8 +104,8 @@ class EventScoringTest extends TestCase
                     'registration_id' => $this->regB->id,
                     'target_butt' => 5,
                     'target_letter' => 'B',
-                ]
-            ]
+                ],
+            ],
         ];
 
         $this->postJson("/api/v1/events/{$this->event->id}/assign-targets", $payload)
@@ -134,8 +138,8 @@ class EventScoringTest extends TestCase
                     'registration_id' => $this->regB->id,
                     'target_butt' => 5,
                     'target_letter' => 'A',
-                ]
-            ]
+                ],
+            ],
         ];
 
         $this->postJson("/api/v1/events/{$this->event->id}/assign-targets", $payload)
@@ -186,7 +190,7 @@ class EventScoringTest extends TestCase
                         ['score_value' => 9, 'is_x' => false, 'is_miss' => false],
                         ['score_value' => 8, 'is_x' => false, 'is_miss' => false],
                         ['score_value' => 0, 'is_x' => false, 'is_miss' => true], // Miss
-                    ]
+                    ],
                 ],
                 [
                     'user_id' => $this->athleteB->id,
@@ -197,9 +201,9 @@ class EventScoringTest extends TestCase
                         ['score_value' => 8, 'is_x' => false, 'is_miss' => false],
                         ['score_value' => 8, 'is_x' => false, 'is_miss' => false],
                         ['score_value' => 8, 'is_x' => false, 'is_miss' => false],
-                    ]
-                ]
-            ]
+                    ],
+                ],
+            ],
         ];
 
         $this->postJson("/api/v1/events/{$this->event->id}/divisions/{$this->division->id}/targets/5/ends/1", $payload)
@@ -226,7 +230,7 @@ class EventScoringTest extends TestCase
         $this->assertEquals(0, $sessionB->x_count);
         $this->assertEquals(0, $sessionB->ten_count);
         $this->assertEquals(0, $sessionB->miss_count);
-        $this->assertEquals(51/6, $sessionB->avg_per_arrow);
+        $this->assertEquals(51 / 6, $sessionB->avg_per_arrow);
     }
 
     public function test_can_get_leaderboard_sorted_correctly(): void

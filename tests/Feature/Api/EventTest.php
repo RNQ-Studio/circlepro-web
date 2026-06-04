@@ -74,8 +74,8 @@ class EventTest extends TestCase
                     'max_score' => 720,
                     'entry_fee' => 150000,
                     'capacity' => 80,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->postJson('/api/v1/events', $payload)
@@ -171,8 +171,8 @@ class EventTest extends TestCase
                     'num_arrows' => 72,
                     'max_score' => 720,
                     'entry_fee' => 100000,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $this->putJson("/api/v1/events/{$event->id}", $payload)

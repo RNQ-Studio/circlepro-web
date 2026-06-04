@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ClubAttendance;
 use App\Models\ClubSchedule;
 use App\Models\Organization;
+use App\Models\User;
 use App\Services\ClubService;
 use App\Support\ApiResponse;
 use App\Support\Enums\AttendanceStatus;
@@ -36,6 +37,7 @@ class ClubAttendanceController extends Controller
 
         $data = $members->map(function ($member) use ($attendances) {
             $attendance = $attendances->get($member->user_id);
+
             return [
                 'id' => $attendance?->id,
                 'user' => [
@@ -71,7 +73,7 @@ class ClubAttendanceController extends Controller
             ->toArray();
 
         foreach ($validated['attendances'] as $item) {
-            if (!in_array($item['user_id'], $memberUserIds, true)) {
+            if (! in_array($item['user_id'], $memberUserIds, true)) {
                 continue;
             }
 
@@ -116,7 +118,7 @@ class ClubAttendanceController extends Controller
                 'location' => $att->schedule->location,
                 'start_time' => $att->schedule->start_time->toIso8601String(),
                 'end_time' => $att->schedule->end_time->toIso8601String(),
-            ]
+            ],
         ]);
 
         return ApiResponse::success($data);
@@ -127,12 +129,12 @@ class ClubAttendanceController extends Controller
         abort_unless($club->type === OrganizationType::Club, 404, 'Club not found.');
     }
 
-    private function ensureAdmin(\App\Models\User $user, Organization $club): void
+    private function ensureAdmin(User $user, Organization $club): void
     {
         abort_unless($this->clubs->isAdmin($user, $club), 403, 'Admin role required.');
     }
 
-    private function ensureMember(\App\Models\User $user, Organization $club): void
+    private function ensureMember(User $user, Organization $club): void
     {
         abort_unless($this->clubs->membershipOf($user, $club) !== null, 403, 'Club membership required.');
     }

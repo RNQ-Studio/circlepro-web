@@ -15,12 +15,12 @@ class RatingResource extends JsonResource
     public function toArray(Request $request): array
     {
         // Resolve rating band/title
-        $band = RatingBand::where(function($query) {
-                $query->where('organization_id', $this->organization_id)
-                    ->orWhereNull('organization_id');
-            })
+        $band = RatingBand::where(function ($query) {
+            $query->where('organization_id', $this->organization_id)
+                ->orWhereNull('organization_id');
+        })
             ->where('min_display_rating', '<=', $this->display_rating)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->whereNull('max_display_rating')
                     ->orWhere('max_display_rating', '>=', $this->display_rating);
             })

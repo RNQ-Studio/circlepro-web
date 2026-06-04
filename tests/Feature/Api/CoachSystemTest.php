@@ -14,6 +14,7 @@ class CoachSystemTest extends TestCase
     use RefreshDatabase;
 
     private User $coachUser;
+
     private User $clientUser;
 
     protected function setUp(): void
@@ -100,8 +101,6 @@ class CoachSystemTest extends TestCase
             'whatsapp_number' => '081',
             'is_verified' => true,
         ]);
-
-
 
         Passport::actingAs($this->clientUser);
 

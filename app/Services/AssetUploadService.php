@@ -14,16 +14,14 @@ use Throwable;
 
 class AssetUploadService
 {
-    private const DISK = 'gcs';
-
     public function __construct(
         private readonly AssetMetadataExtractor $metadataExtractor,
     ) {}
 
     /**
-     * Upload file langsung ke GCS lalu simpan record asset.
-     * Atomic: bila upload GCS gagal, tidak ada record DB yang dibuat;
-     * bila penyimpanan DB gagal setelah upload, file GCS yang sudah terupload dihapus kembali.
+     * Upload file langsung ke storage lalu simpan record asset.
+     * Atomic: bila upload gagal, tidak ada record DB yang dibuat;
+     * bila penyimpanan DB gagal setelah upload, file yang sudah terupload dihapus kembali.
      */
     public function upload(
         UploadedFile $file,
@@ -32,7 +30,7 @@ class AssetUploadService
         ?Carbon $retainUntil = null,
         bool $isProtected = false,
     ): Asset {
-        // UUID dipakai sekaligus sebagai PK asset dan nama file di GCS (tidak bisa ditebak).
+        // UUID dipakai sekaligus sebagai PK asset dan nama file di storage (tidak bisa ditebak).
         $uuid = (string) Str::uuid();
         $extension = $file->getClientOriginalExtension() ?: $file->guessExtension() ?: 'bin';
 
@@ -50,19 +48,21 @@ class AssetUploadService
         // Ekstrak metadata SEBELUM upload — setelah store(), file sementara sudah dipindah.
         $metadata = $this->metadataExtractor->extract($file);
 
-        $disk = Storage::disk(self::DISK);
+        $diskName = $this->resolveDisk();
+        $disk = Storage::disk($diskName);
+        $storageType = $diskName === 'gcs' ? StorageType::Gcs : StorageType::Local;
 
-        // Disk 'gcs' dikonfigurasi 'throw' => true, jadi kegagalan upload melempar exception
-        // (tertangkap handler global) dan kita tidak pernah sampai membuat record DB.
+        // Disk 'gcs' dikonfigurasi 'throw' => true.
+        // Jika disk local, kita cek kembaliannya manual dan throw exception agar atomicity terjaga.
         $stored = $disk->putFileAs($folder, $file, $filename);
         if ($stored === false) {
-            throw new RuntimeException('Failed to upload file to Google Cloud Storage.');
+            throw new RuntimeException('Failed to upload file to storage.');
         }
 
         try {
             $asset = new Asset([
                 'user_id' => $userId,
-                'storage_type' => StorageType::Gcs,
+                'storage_type' => $storageType,
                 'path' => $path,
                 'url' => $disk->url($path),
                 'original_filename' => $file->getClientOriginalName(),
@@ -84,11 +84,30 @@ class AssetUploadService
 
             return $asset;
         } catch (Throwable $e) {
-            // Kompensasi: bersihkan file yatim di GCS agar tidak ada orphan tanpa record.
+            // Kompensasi: bersihkan file yatim di storage agar tidak ada orphan tanpa record.
             $disk->delete($path);
 
             throw $e;
         }
+    }
+
+    private function resolveDisk(): string
+    {
+        if (app()->runningUnitTests()) {
+            return 'gcs';
+        }
+
+        $projectId = config('filesystems.disks.gcs.project_id');
+        $bucket = config('filesystems.disks.gcs.bucket');
+
+        if (filled($projectId) && filled($bucket)) {
+            return 'gcs';
+        }
+
+        $default = config('filesystems.default', 'public');
+
+        // Avoid setting 'gcs' if credentials are not configured
+        return $default === 'gcs' ? 'public' : $default;
     }
 
     private function checksum(UploadedFile $file): ?string

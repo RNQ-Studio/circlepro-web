@@ -11,11 +11,11 @@ return new class extends Migration
         Schema::create('rating_bands', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->foreignUlid('organization_id')->nullable()->constrained('organizations')->cascadeOnDelete();
-            
+
             $table->string('title', 50);
             $table->string('badge', 40)->nullable();
             $table->string('color', 20)->nullable();
-            
+
             $table->integer('min_display_rating');
             $table->integer('max_display_rating')->nullable();
             $table->smallInteger('sort_order');

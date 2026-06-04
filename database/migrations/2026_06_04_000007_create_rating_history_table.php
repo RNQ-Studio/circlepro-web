@@ -31,7 +31,7 @@ return new class extends Migration
             $table->string('event_tier', 5)->nullable();
             $table->decimal('k_effective', 8, 4)->nullable();
             $table->boolean('is_manual_override')->default(false);
-            
+
             $table->timestamp('computed_at');
             $table->timestamps();
 

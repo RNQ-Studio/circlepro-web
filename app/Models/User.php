@@ -10,8 +10,10 @@ use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -41,8 +43,8 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- * @property-read \Illuminate\Database\Eloquent\Collection<int, EventRegistration> $registrations
- * @property-read \Illuminate\Database\Eloquent\Collection<int, Story> $stories
+ * @property-read Collection<int, EventRegistration> $registrations
+ * @property-read Collection<int, Story> $stories
  */
 #[Fillable(['name', 'username', 'full_name', 'email', 'password', 'is_active', 'system_role', 'avatar', 'phone', 'phone_verified_at', 'last_active_at'])]
 #[Hidden(['password', 'remember_token'])]
@@ -115,22 +117,22 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAu
         return $this->hasOne(UserStat::class);
     }
 
-    /** @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Badge, $this> */
-    public function badges(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    /** @return BelongsToMany<Badge, $this> */
+    public function badges(): BelongsToMany
     {
         return $this->belongsToMany(Badge::class, 'user_badges')
             ->withPivot('unlocked_at')
             ->withTimestamps();
     }
 
-    /** @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<User, $this> */
-    public function followings(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    /** @return BelongsToMany<User, $this> */
+    public function followings(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'follows', 'follower_id', 'followee_id')->using(Follow::class)->withPivot('created_at');
     }
 
-    /** @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<User, $this> */
-    public function followers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    /** @return BelongsToMany<User, $this> */
+    public function followers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'follows', 'followee_id', 'follower_id')->using(Follow::class)->withPivot('created_at');
     }

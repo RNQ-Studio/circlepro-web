@@ -25,8 +25,11 @@ class EventRegistrationTest extends TestCase
     use RefreshDatabase;
 
     private User $organizer;
+
     private User $athlete;
+
     private Event $event;
+
     private EventDivision $division;
 
     protected function setUp(): void

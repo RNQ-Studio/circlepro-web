@@ -62,7 +62,7 @@ class EventRegistrationController extends Controller
             $bibNumber = "{$bowClassCode}-{$ageGroupCode}-{$sequence}";
 
             // Generate QR token
-            $qrCode = "REG-" . Str::random(10) . "-" . strtoupper(Str::random(4));
+            $qrCode = 'REG-'.Str::random(10).'-'.strtoupper(Str::random(4));
 
             $reg = EventRegistration::query()->create([
                 'id' => $registrationId,
@@ -100,7 +100,7 @@ class EventRegistrationController extends Controller
     /** Display all registrations for an event (organizer only). */
     public function participants(Request $request, Event $event): JsonResponse
     {
-        if (!$this->eventService->canManage($request->user(), $event)) {
+        if (! $this->eventService->canManage($request->user(), $event)) {
             return ApiResponse::error('Unauthorized to view participants.', 403);
         }
 
@@ -118,7 +118,7 @@ class EventRegistrationController extends Controller
     {
         $event = $registration->division->event;
 
-        if (!$this->eventService->canManage($request->user(), $event)) {
+        if (! $this->eventService->canManage($request->user(), $event)) {
             return ApiResponse::error('Unauthorized to manage participants.', 403);
         }
 
@@ -142,7 +142,7 @@ class EventRegistrationController extends Controller
     {
         $event = $registration->division->event;
 
-        if (!$this->eventService->canManage($request->user(), $event)) {
+        if (! $this->eventService->canManage($request->user(), $event)) {
             return ApiResponse::error('Unauthorized to manage participants.', 403);
         }
 
@@ -168,9 +168,9 @@ class EventRegistrationController extends Controller
             $isOldCancelled = in_array($oldStatus, [RegistrationStatus::Cancelled, RegistrationStatus::NoShow], true);
             $isNewCancelled = in_array($newStatus, [RegistrationStatus::Cancelled, RegistrationStatus::NoShow], true);
 
-            if (!$isOldCancelled && $isNewCancelled) {
+            if (! $isOldCancelled && $isNewCancelled) {
                 $division->decrement('num_participants');
-            } elseif ($isOldCancelled && !$isNewCancelled) {
+            } elseif ($isOldCancelled && ! $isNewCancelled) {
                 $division->increment('num_participants');
             }
         });

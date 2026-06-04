@@ -45,13 +45,20 @@ class TargetFaceForm
                     ->image()
                     ->maxSize(5120)
                     ->dehydrated(false)
-                    ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, callable $set) {
+                    ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, callable $set, $record) {
                         $asset = app(\App\Services\AssetUploadService::class)->upload(
                             file: $file,
                             type: 'target_face',
                             userId: auth()->id(),
                         );
                         $set('image_path', $asset->url);
+                        
+                        if ($record) {
+                            $record->update([
+                                'image_path' => $asset->url,
+                            ]);
+                        }
+                        
                         return $asset->id;
                     }),
                 Placeholder::make('image_preview')

@@ -150,7 +150,7 @@ class TargetFaceSeeder extends Seeder
             [
                 'code' => 'bandul_merahkuningputih',
                 'name' => 'BANDUL MERAH KUNING PUTIH',
-                'image_path' => 'https://storage.googleapis.com/manahpro-document/production/target-face/2026/06/8c688239-ffb7-42c7-a608-705dcb2c8597.jfif',
+                'image_path' => 'https://storage.googleapis.com/manahpro-document/production/target-face/2026/06/e1bcc618-a463-40fa-a4ba-dab5b9a63d9c.png',
                 'scoring_rules' => [
                     ['value' => 3, 'label' => 'Merah (3)', 'color' => '#E53935'],
                     ['value' => 2, 'label' => 'Kuning (2)', 'color' => '#FFC107'],

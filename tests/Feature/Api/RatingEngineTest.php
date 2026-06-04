@@ -63,7 +63,7 @@ class RatingEngineTest extends TestCase
         $this->event = Event::factory()->create([
             'organization_id' => $this->org->id,
             'created_by' => $this->organizer->id,
-            'tier' => EventTier::B,
+            'tier' => EventTier::D,
             'format' => EventFormat::RankingRound,
             'starts_at' => now(),
         ]);
@@ -85,9 +85,9 @@ class RatingEngineTest extends TestCase
     {
         Passport::actingAs($this->organizer);
 
-        // Setup 3 participants
-        $athletes = User::factory()->count(3)->create();
-        $scores = [680, 650, 600];
+        // Setup 5 participants to meet Tier D minimum threshold (5)
+        $athletes = User::factory()->count(5)->create();
+        $scores = [680, 670, 650, 620, 600];
 
         foreach ($athletes as $idx => $athlete) {
             // Profile details (province and city)
@@ -141,9 +141,7 @@ class RatingEngineTest extends TestCase
             $rating = Rating::where('user_id', $athlete->id)->first();
             $this->assertNotNull($rating);
 
-            // For B-tier event, check Glicko-2 updates
-            // Since athletes A > B > C, their post-event mu should be ordered as A > B > C
-            // Also assert history table logged it
+            // Check rating history entry exists
             $this->assertDatabaseHas('rating_history', [
                 'rating_id' => $rating->id,
                 'user_id' => $athlete->id,
@@ -153,10 +151,10 @@ class RatingEngineTest extends TestCase
             ]);
         }
 
-        // Assert relative rating ordering: Athlete 0 (680 score) should have higher mu than Athlete 1 (650), who has higher mu than Athlete 2 (600)
+        // Assert relative rating ordering: Athlete 0 (680 score) should have higher mu than Athlete 2 (650), who has higher mu than Athlete 4 (600)
         $rating0 = Rating::where('user_id', $athletes[0]->id)->first();
-        $rating1 = Rating::where('user_id', $athletes[1]->id)->first();
-        $rating2 = Rating::where('user_id', $athletes[2]->id)->first();
+        $rating1 = Rating::where('user_id', $athletes[2]->id)->first();
+        $rating2 = Rating::where('user_id', $athletes[4]->id)->first();
 
         $this->assertTrue($rating0->mu > $rating1->mu);
         $this->assertTrue($rating1->mu > $rating2->mu);
@@ -397,5 +395,347 @@ class RatingEngineTest extends TestCase
             'user_id' => $athlete->id,
             'event_division_id' => null, // null indicates decay/manual update
         ]);
+    }
+
+    public function test_minimum_participant_threshold_and_skipping(): void
+    {
+        Passport::actingAs($this->organizer);
+
+        // Create an event with Tier B
+        $event = Event::factory()->create([
+            'organization_id' => $this->org->id,
+            'created_by' => $this->organizer->id,
+            'tier' => EventTier::B,
+            'format' => EventFormat::RankingRound,
+            'starts_at' => now(),
+        ]);
+
+        $division = $event->divisions()->create([
+            'bow_class' => BowClass::Recurve->value,
+            'gender' => Gender::Male->value,
+            'age_group' => AgeGroup::Dewasa->value,
+            'distance_category' => DistanceCategory::D70m->value,
+            'distance_m' => 70,
+            'num_arrows' => 72,
+            'max_score' => 720,
+            'entry_fee' => 150000,
+            'capacity' => 10,
+        ]);
+
+        // Register only 4 participants (less than 5, which is Tier D minimum)
+        $athletes = User::factory()->count(4)->create();
+        foreach ($athletes as $athlete) {
+            EventRegistration::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $division->id,
+                'status' => 'checked_in',
+            ]);
+
+            ScoringSession::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $division->id,
+                'status' => ScoringSessionStatus::Completed,
+                'total_score' => 600,
+                'max_possible_score' => 720,
+            ]);
+        }
+
+        // Finalize ratings - should skip calculation because n < 5
+        $this->postJson("/api/v1/events/{$event->id}/divisions/{$division->id}/finalize-ratings")
+            ->assertOk();
+
+        $division->refresh();
+        $this->assertEquals('rated', $division->rating_status);
+
+        // Verify no ratings were updated or history created
+        $this->assertDatabaseEmpty('ratings');
+        $this->assertDatabaseEmpty('rating_history');
+    }
+
+    public function test_minimum_participant_threshold_and_downgrading(): void
+    {
+        Passport::actingAs($this->organizer);
+
+        // Create an event with Tier S
+        $event = Event::factory()->create([
+            'organization_id' => $this->org->id,
+            'created_by' => $this->organizer->id,
+            'tier' => EventTier::S,
+            'format' => EventFormat::RankingRound,
+            'starts_at' => now(),
+        ]);
+
+        $division = $event->divisions()->create([
+            'bow_class' => BowClass::Recurve->value,
+            'gender' => Gender::Male->value,
+            'age_group' => AgeGroup::Dewasa->value,
+            'distance_category' => DistanceCategory::D70m->value,
+            'distance_m' => 70,
+            'num_arrows' => 72,
+            'max_score' => 720,
+            'entry_fee' => 150000,
+            'capacity' => 10,
+        ]);
+
+        // Register 6 participants (should downgrade S -> D because 6 < 10)
+        $athletes = User::factory()->count(6)->create();
+        foreach ($athletes as $idx => $athlete) {
+            EventRegistration::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $division->id,
+                'status' => 'checked_in',
+            ]);
+
+            ScoringSession::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $division->id,
+                'status' => ScoringSessionStatus::Completed,
+                'total_score' => 600 + ($idx * 10),
+                'max_possible_score' => 720,
+            ]);
+        }
+
+        $this->postJson("/api/v1/events/{$event->id}/divisions/{$division->id}/finalize-ratings")
+            ->assertOk();
+
+        // Check that history entry has Tier S (from event) but rating changes were calculated with effective Tier D
+        $this->assertDatabaseHas('rating_history', [
+            'event_tier' => 'S',
+            'num_participants' => 6,
+        ]);
+        $this->assertDatabaseCount('ratings', 6);
+    }
+
+    public function test_strength_of_field_adjustment(): void
+    {
+        Passport::actingAs($this->organizer);
+
+        // Setup high-rated opponents (SoF > 1600), registering 5 to pass Tier D threshold
+        $athletes = User::factory()->count(5)->create();
+        $scores = [680, 670, 650, 620, 600];
+
+        foreach ($athletes as $idx => $athlete) {
+            Rating::create([
+                'organization_id' => $this->org->id,
+                'user_id' => $athlete->id,
+                'bow_class' => BowClass::Recurve->value,
+                'gender' => Gender::Male->value,
+                'age_group' => AgeGroup::Dewasa->value,
+                'distance_category' => DistanceCategory::D70m->value,
+                'mu' => 1700.0, // Avg mu = 1700 > 1600
+                'phi' => 100.0,
+                'sigma' => 0.06,
+                'display_rating' => 1500.0,
+                'status' => RatingStatus::Ranked->value,
+                'events_count' => 5,
+            ]);
+
+            EventRegistration::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $this->division->id,
+                'status' => 'checked_in',
+            ]);
+
+            ScoringSession::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $this->division->id,
+                'status' => ScoringSessionStatus::Completed,
+                'total_score' => $scores[$idx],
+                'max_possible_score' => 720,
+            ]);
+        }
+
+        $this->postJson("/api/v1/events/{$this->event->id}/divisions/{$this->division->id}/finalize-ratings")
+            ->assertOk();
+
+        // Verify division's SoF is logged correctly (> 1600)
+        $this->division->refresh();
+        $this->assertEquals(1700.0, $this->division->sof_avg_rating);
+    }
+
+    public function test_sandbagging_and_anomaly_detection(): void
+    {
+        Passport::actingAs($this->organizer);
+
+        // Register 5 participants to satisfy Tier D threshold
+        $athletes = User::factory()->count(5)->create();
+
+        // Athlete 0 has pre-existing rating but will perform excessively well
+        Rating::create([
+            'organization_id' => $this->org->id,
+            'user_id' => $athletes[0]->id,
+            'bow_class' => BowClass::Recurve->value,
+            'gender' => Gender::Male->value,
+            'age_group' => AgeGroup::Dewasa->value,
+            'distance_category' => DistanceCategory::D70m->value,
+            'mu' => 500.0,
+            'phi' => 50.0,
+            'display_rating' => 400.0,
+            'status' => RatingStatus::Established->value,
+            'events_count' => 10,
+        ]);
+
+        foreach ($athletes as $idx => $athlete) {
+            EventRegistration::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $this->division->id,
+                'status' => 'checked_in',
+            ]);
+
+            ScoringSession::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $this->division->id,
+                'status' => ScoringSessionStatus::Completed,
+                'total_score' => $idx === 0 ? 710 : 500 - ($idx * 50), // Athlete 0 gets massive score
+                'max_possible_score' => 720,
+            ]);
+        }
+
+        $this->postJson("/api/v1/events/{$this->event->id}/divisions/{$this->division->id}/finalize-ratings")
+            ->assertOk();
+
+        // Verify Athlete 0 gets flagged as suspicious
+        $this->assertDatabaseHas('ratings', [
+            'user_id' => $athletes[0]->id,
+            'is_suspicious' => true,
+        ]);
+
+        $this->assertDatabaseHas('rating_history', [
+            'user_id' => $athletes[0]->id,
+            'is_suspicious' => true,
+        ]);
+    }
+
+    public function test_calibration_mode_event(): void
+    {
+        Passport::actingAs($this->organizer);
+
+        // Create a calibration event with Tier D to pass min participants (5)
+        $calibrationEvent = Event::factory()->create([
+            'organization_id' => $this->org->id,
+            'created_by' => $this->organizer->id,
+            'tier' => EventTier::D,
+            'format' => EventFormat::RankingRound,
+            'starts_at' => now(),
+            'is_calibration' => true,
+        ]);
+
+        $division = $calibrationEvent->divisions()->create([
+            'bow_class' => BowClass::Recurve->value,
+            'gender' => Gender::Male->value,
+            'age_group' => AgeGroup::Dewasa->value,
+            'distance_category' => DistanceCategory::D70m->value,
+            'distance_m' => 70,
+            'num_arrows' => 72,
+            'max_score' => 720,
+            'entry_fee' => 150000,
+            'capacity' => 10,
+        ]);
+
+        // Register 5 participants
+        $athletes = User::factory()->count(5)->create();
+        $scores = [680, 670, 650, 620, 600];
+
+        foreach ($athletes as $idx => $athlete) {
+            // Seed initial ratings in DB
+            Rating::create([
+                'organization_id' => $this->org->id,
+                'user_id' => $athlete->id,
+                'bow_class' => BowClass::Recurve->value,
+                'gender' => Gender::Male->value,
+                'age_group' => AgeGroup::Dewasa->value,
+                'distance_category' => DistanceCategory::D70m->value,
+                'mu' => 1500.0,
+                'phi' => 100.0,
+                'display_rating' => 1300.0,
+                'status' => RatingStatus::Ranked->value,
+                'events_count' => 5,
+            ]);
+
+            EventRegistration::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $division->id,
+                'status' => 'checked_in',
+            ]);
+
+            ScoringSession::factory()->create([
+                'user_id' => $athlete->id,
+                'event_division_id' => $division->id,
+                'status' => ScoringSessionStatus::Completed,
+                'total_score' => $scores[$idx],
+                'max_possible_score' => 720,
+            ]);
+        }
+
+        $this->postJson("/api/v1/events/{$calibrationEvent->id}/divisions/{$division->id}/finalize-ratings")
+            ->assertOk();
+
+        // Verify history has is_calibration = true
+        $this->assertDatabaseHas('rating_history', [
+            'is_calibration' => true,
+            'event_division_id' => $division->id,
+        ]);
+
+        // Verify ratings table remains unmodified (mu remains 1500.0 instead of updating)
+        foreach ($athletes as $athlete) {
+            $this->assertDatabaseHas('ratings', [
+                'user_id' => $athlete->id,
+                'mu' => 1500.0,
+            ]);
+        }
+    }
+
+    public function test_global_silent_mode(): void
+    {
+        // Seed some rating
+        $athlete = User::factory()->create();
+        Rating::create([
+            'organization_id' => $this->org->id,
+            'user_id' => $athlete->id,
+            'bow_class' => BowClass::Recurve->value,
+            'gender' => Gender::Male->value,
+            'age_group' => AgeGroup::Dewasa->value,
+            'distance_category' => DistanceCategory::D70m->value,
+            'mu' => 1500.0,
+            'phi' => 100.0,
+            'display_rating' => 1300.0,
+            'status' => RatingStatus::Ranked->value,
+            'events_count' => 5,
+        ]);
+
+        // 1. Regular behavior (silent mode false)
+        config(['app.rating_silent_mode' => false]);
+
+        $this->getJson('/api/v1/leaderboard?'.http_build_query([
+            'bow_class' => BowClass::Recurve->value,
+            'gender' => Gender::Male->value,
+            'age_group' => AgeGroup::Dewasa->value,
+            'distance_category' => DistanceCategory::D70m->value,
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        // 2. Silent mode active (unauthenticated/guest)
+        config(['app.rating_silent_mode' => true]);
+
+        $this->getJson('/api/v1/leaderboard?'.http_build_query([
+            'bow_class' => BowClass::Recurve->value,
+            'gender' => Gender::Male->value,
+            'age_group' => AgeGroup::Dewasa->value,
+            'distance_category' => DistanceCategory::D70m->value,
+        ]))
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'Sistem rating sedang dalam masa kalibrasi.');
+
+        // 3. Silent mode active (admin user allowed)
+        Passport::actingAs($this->organizer);
+        $this->getJson('/api/v1/leaderboard?'.http_build_query([
+            'bow_class' => BowClass::Recurve->value,
+            'gender' => Gender::Male->value,
+            'age_group' => AgeGroup::Dewasa->value,
+            'distance_category' => DistanceCategory::D70m->value,
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
     }
 }

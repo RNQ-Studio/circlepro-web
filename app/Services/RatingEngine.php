@@ -62,6 +62,35 @@ class RatingEngine
                 return;
             }
 
+            // Enforce minimum participant threshold per event tier
+            $effectiveTier = $event->tier;
+            if ($effectiveTier instanceof EventTier) {
+                $effectiveTier = $effectiveTier->value;
+            }
+
+            // Downgrade logic based on participant counts
+            if ($effectiveTier === 'S' && $n < 30) {
+                $effectiveTier = 'A';
+            }
+            if ($effectiveTier === 'A' && $n < 20) {
+                $effectiveTier = 'B';
+            }
+            if ($effectiveTier === 'B' && $n < 15) {
+                $effectiveTier = 'C';
+            }
+            if ($effectiveTier === 'C' && $n < 10) {
+                $effectiveTier = 'D';
+            }
+            if ($effectiveTier === 'D' && $n < 5) {
+                // Skip rating calculation entirely if participants are fewer than 5
+                $division->update([
+                    'rating_status' => 'rated',
+                    'sof_avg_rating' => 1500.00,
+                ]);
+
+                return;
+            }
+
             // 2. Determine placements (sort by score desc, x_count desc, ten_count desc, miss_count asc)
             usort($participantsData, function ($a, $b) {
                 if ($a['score'] !== $b['score']) {
@@ -110,18 +139,18 @@ class RatingEngine
             }
 
             $distVal = DistanceCategory::D70m; // Default fallback
-            if ($division->distance) {
-                $distVal = $division->distance;
+            if ($division->distance_category) {
+                $distVal = $division->distance_category;
             }
 
             foreach ($participantsData as &$p) {
                 $rating = Rating::where([
                     'organization_id' => $orgId,
                     'user_id' => $p['user_id'],
-                    'bow_class' => $division->bow_class,
-                    'gender' => $genderVal,
-                    'age_group' => $ageVal,
-                    'distance_category' => $distVal,
+                    'bow_class' => $division->bow_class->value ?? $division->bow_class,
+                    'gender' => $genderVal->value ?? $genderVal,
+                    'age_group' => $ageVal->value ?? $ageVal,
+                    'distance_category' => $distVal->value ?? $distVal,
                 ])->lockForUpdate()->first();
 
                 if (! $rating) {
@@ -139,6 +168,9 @@ class RatingEngine
                         'status' => RatingStatus::Provisional,
                         'events_count' => 0,
                     ]);
+                    if ($event->is_calibration) {
+                        $rating->save(); // Save with defaults so it has an ID for rating history
+                    }
                 }
 
                 $ratings[$p['user_id']] = $rating;
@@ -148,6 +180,14 @@ class RatingEngine
 
             // Calculate SoF (Strength of Field)
             $sof = $sofSum / $n;
+
+            // SoF factor adjustment
+            $sofFactor = 1.0;
+            if ($sof > 1600.0) {
+                $sofFactor = 1.1;
+            } elseif ($sof < 1400.0) {
+                $sofFactor = 0.8;
+            }
 
             // 5. Compute Normalized Performance Score (NPS) for each participant
             foreach ($participantsData as &$p) {
@@ -162,6 +202,11 @@ class RatingEngine
             foreach ($participantsData as $p) {
                 $userId = $p['user_id'];
                 $currRating = $ratings[$userId];
+
+                $muBefore = $currRating->mu;
+                $sigmaBefore = $currRating->sigma;
+                $displayBefore = $currRating->display_rating;
+                $eventsCount = $currRating->events_count;
 
                 // Convert to Glicko-2 scale
                 $mu = ($currRating->mu - 1500.0) / 173.7178;
@@ -285,25 +330,19 @@ class RatingEngine
                     $kBase = 16.0;
                 }
 
-                // Event tier multiplier
+                // Event tier multiplier (using effective tier after downgrading check)
                 $tMult = 1.0;
-                if ($event->tier) {
-                    $tierVal = $event->tier;
-                    if ($tierVal instanceof EventTier) {
-                        $tierVal = $tierVal->value;
-                    }
-                    switch ($tierVal) {
-                        case 'S': $tMult = 1.5;
-                            break;
-                        case 'A': $tMult = 1.2;
-                            break;
-                        case 'B': $tMult = 1.0;
-                            break;
-                        case 'C': $tMult = 0.7;
-                            break;
-                        case 'D': $tMult = 0.4;
-                            break;
-                    }
+                switch ($effectiveTier) {
+                    case 'S': $tMult = 1.5;
+                        break;
+                    case 'A': $tMult = 1.2;
+                        break;
+                    case 'B': $tMult = 1.0;
+                        break;
+                    case 'C': $tMult = 0.7;
+                        break;
+                    case 'D': $tMult = 0.4;
+                        break;
                 }
 
                 // Participation multiplier
@@ -328,9 +367,9 @@ class RatingEngine
                 $kEffective = $kBase * $tMult * $pMult * $fMult;
                 $changeMultiplier = $kEffective / 24.0;
 
-                // Apply K-factor multiplier on Glicko-2 scale
+                // Apply K-factor multiplier & SoF factor on Glicko-2 scale
                 $muChange = $newMu - $mu;
-                $muAdjusted = $mu + ($muChange * $changeMultiplier);
+                $muAdjusted = $mu + ($muChange * $changeMultiplier * $sofFactor);
 
                 // Convert back to original scale
                 $finalMu = 173.7178 * $muAdjusted + 1500.0;
@@ -342,6 +381,29 @@ class RatingEngine
                     $displayRating = 100.0; // Lower bound cap
                 }
 
+                // Sandbagging / Anomaly Detection
+                $isSuspicious = false;
+                $suspiciousReasons = [];
+
+                if ($newSigma > 0.08) {
+                    $isSuspicious = true;
+                    $suspiciousReasons[] = "High volatility detected (sigma > 0.08)";
+                }
+                if (($newSigma - $sigmaBefore) > 0.02) {
+                    $isSuspicious = true;
+                    $suspiciousReasons[] = "Volatility jump detected (delta sigma > 0.02)";
+                }
+                if ($eventsCount >= 3 && ($p['nps'] - $displayBefore) > 250.0) {
+                    $isSuspicious = true;
+                    $suspiciousReasons[] = "Score performance is an outlier (NPS vs Display Rating diff > 250)";
+                }
+                if ($eventsCount >= 3 && ($finalMu - $muBefore) > 100.0) {
+                    $isSuspicious = true;
+                    $suspiciousReasons[] = "Abrupt rating improvement (mu diff > 100)";
+                }
+
+                $suspiciousReasonStr = $isSuspicious ? implode(', ', $suspiciousReasons) : null;
+
                 $newRatingsData[$userId] = [
                     'mu' => $finalMu,
                     'phi' => $finalPhi,
@@ -351,6 +413,8 @@ class RatingEngine
                     'score_achieved' => $p['score'],
                     'nps' => $p['nps'],
                     'placement' => $p['placement'],
+                    'is_suspicious' => $isSuspicious,
+                    'suspicious_reason' => $suspiciousReasonStr,
                 ];
             }
 
@@ -382,25 +446,30 @@ class RatingEngine
                     $peakDisplay = $newData['display_rating'];
                 }
 
-                // Update rating record
-                $currRating->fill([
-                    'mu' => $newData['mu'],
-                    'phi' => $newData['phi'],
-                    'sigma' => $newData['sigma'],
-                    'display_rating' => $newData['display_rating'],
-                    'status' => $newStatus,
-                    'events_count' => $newEventsCount,
-                    'peak_display_rating' => $peakDisplay,
-                    'last_event_date' => $eventDate,
-                ]);
-                $currRating->save();
+                // Update rating record (only if it is NOT a calibration event)
+                if (! $event->is_calibration) {
+                    $currRating->fill([
+                        'mu' => $newData['mu'],
+                        'phi' => $newData['phi'],
+                        'sigma' => $newData['sigma'],
+                        'display_rating' => $newData['display_rating'],
+                        'status' => $newStatus,
+                        'is_suspicious' => $newData['is_suspicious'],
+                        'suspicious_reason' => $newData['suspicious_reason'],
+                        'events_count' => $newEventsCount,
+                        'peak_display_rating' => $peakDisplay,
+                        'last_event_date' => $eventDate,
+                    ]);
+                    $currRating->save();
+                }
 
-                // Log rating history entry
+                // Log rating history entry (record is always created, flagged appropriately)
                 RatingHistory::create([
                     'rating_id' => $currRating->id,
                     'user_id' => $userId,
                     'event_division_id' => $division->id,
                     'rating_period_id' => $period->id,
+                    'is_calibration' => $event->is_calibration ? true : false,
                     'mu_before' => $muBefore,
                     'mu_after' => $newData['mu'],
                     'phi_before' => $phiBefore,
@@ -416,6 +485,8 @@ class RatingEngine
                     'event_tier' => $event->tier,
                     'k_effective' => $newData['k_effective'],
                     'is_manual_override' => false,
+                    'is_suspicious' => $newData['is_suspicious'],
+                    'suspicious_reason' => $newData['suspicious_reason'],
                     'computed_at' => now(),
                 ]);
             }

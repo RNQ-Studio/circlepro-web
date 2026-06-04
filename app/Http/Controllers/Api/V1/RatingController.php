@@ -17,6 +17,7 @@ use App\Support\Enums\AgeGroup;
 use App\Support\Enums\BowClass;
 use App\Support\Enums\DistanceCategory;
 use App\Support\Enums\Gender;
+use App\Support\Enums\MemberRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -75,6 +76,23 @@ class RatingController extends Controller
             return ApiResponse::error('Platform organization not found.', 500);
         }
 
+        if (config('app.rating_silent_mode', false)) {
+            $user = $request->user('api');
+            $isAdmin = false;
+            if ($user) {
+                $membership = $user->organizationMemberships()
+                    ->where('organization_id', $orgId)
+                    ->first();
+                if ($membership && in_array($membership->role->value ?? $membership->role, ['owner', 'admin', 'staff', MemberRole::Owner, MemberRole::Admin], true)) {
+                    $isAdmin = true;
+                }
+            }
+
+            if (! $isAdmin) {
+                return ApiResponse::error('Sistem rating sedang dalam masa kalibrasi.', 403);
+            }
+        }
+
         $query = Rating::query()
             ->where('organization_id', $orgId)
             ->where('bow_class', $validated['bow_class'])
@@ -107,8 +125,31 @@ class RatingController extends Controller
     /**
      * Get all ratings for a specific user (public).
      */
-    public function getUserRatings(User $user): JsonResponse
+    public function getUserRatings(Request $request, User $user): JsonResponse
     {
+        if (config('app.rating_silent_mode', false)) {
+            $currentUser = $request->user('api');
+            $isAdmin = false;
+            if ($currentUser) {
+                if ($currentUser->id === $user->id) {
+                    $isAdmin = true;
+                } else {
+                    $platformOrg = Organization::where('slug', 'manahpro')->first();
+                    $orgId = $platformOrg?->id;
+                    $membership = $currentUser->organizationMemberships()
+                        ->where('organization_id', $orgId)
+                        ->first();
+                    if ($membership && in_array($membership->role->value ?? $membership->role, ['owner', 'admin', 'staff', MemberRole::Owner, MemberRole::Admin], true)) {
+                        $isAdmin = true;
+                    }
+                }
+            }
+
+            if (! $isAdmin) {
+                return ApiResponse::error('Sistem rating sedang dalam masa kalibrasi.', 403);
+            }
+        }
+
         $ratings = Rating::where('user_id', $user->id)
             ->with('organization')
             ->orderByDesc('display_rating')
@@ -120,16 +161,53 @@ class RatingController extends Controller
     /**
      * Get rating history log for a specific rating profile of a user (public).
      */
-    public function getRatingHistory(User $user, Rating $rating): JsonResponse
+    public function getRatingHistory(Request $request, User $user, Rating $rating): JsonResponse
     {
         if ($rating->user_id !== $user->id) {
             return ApiResponse::error('Rating profile tidak cocok dengan user.', 404);
         }
 
-        $history = $rating->histories()
+        if (config('app.rating_silent_mode', false)) {
+            $currentUser = $request->user('api');
+            $isAdmin = false;
+            if ($currentUser) {
+                if ($currentUser->id === $user->id) {
+                    $isAdmin = true;
+                } else {
+                    $membership = $currentUser->organizationMemberships()
+                        ->where('organization_id', $rating->organization_id)
+                        ->first();
+                    if ($membership && in_array($membership->role->value ?? $membership->role, ['owner', 'admin', 'staff', MemberRole::Owner, MemberRole::Admin], true)) {
+                        $isAdmin = true;
+                    }
+                }
+            }
+
+            if (! $isAdmin) {
+                return ApiResponse::error('Sistem rating sedang dalam masa kalibrasi.', 403);
+            }
+        }
+
+        $query = $rating->histories()
             ->with(['eventDivision.event', 'ratingPeriod'])
-            ->orderByDesc('computed_at')
-            ->get();
+            ->orderByDesc('computed_at');
+
+        $currentUser = $request->user('api');
+        $isAdmin = false;
+        if ($currentUser) {
+            $membership = $currentUser->organizationMemberships()
+                ->where('organization_id', $rating->organization_id)
+                ->first();
+            if ($membership && in_array($membership->role->value ?? $membership->role, ['owner', 'admin', 'staff', MemberRole::Owner, MemberRole::Admin], true)) {
+                $isAdmin = true;
+            }
+        }
+
+        if (! $isAdmin) {
+            $query->where('is_calibration', false);
+        }
+
+        $history = $query->get();
 
         return ApiResponse::success(RatingHistoryResource::collection($history));
     }

@@ -81,6 +81,7 @@ class Event extends Model
         'schedule',
         'rules',
         'is_external',
+        'is_calibration',
         'published_at',
     ];
 
@@ -92,6 +93,7 @@ class Event extends Model
             'status' => EventStatus::class,
             'schedule' => 'array',
             'is_external' => 'boolean',
+            'is_calibration' => 'boolean',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'registration_opens_at' => 'datetime',

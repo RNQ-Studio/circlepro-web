@@ -43,6 +43,7 @@ class RatingHistory extends Model
         'user_id',
         'event_division_id',
         'rating_period_id',
+        'is_calibration',
         'mu_before',
         'mu_after',
         'phi_before',
@@ -58,6 +59,8 @@ class RatingHistory extends Model
         'event_tier',
         'k_effective',
         'is_manual_override',
+        'is_suspicious',
+        'suspicious_reason',
         'computed_at',
     ];
 
@@ -75,6 +78,8 @@ class RatingHistory extends Model
             'nps' => 'float',
             'k_effective' => 'float',
             'is_manual_override' => 'boolean',
+            'is_calibration' => 'boolean',
+            'is_suspicious' => 'boolean',
             'event_tier' => EventTier::class,
             'computed_at' => 'datetime',
         ];

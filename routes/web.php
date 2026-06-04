@@ -11,15 +11,9 @@ Route::get('/articles', [PublicArticleController::class, 'index'])->name('public
 Route::get('/articles/{slug}', [PublicArticleController::class, 'show'])->name('public.articles.show');
 
 Route::get('/diagnostic-user', function () {
-    $user = \App\Models\User::withTrashed()->find(3);
-    if (!$user) {
-        return response()->json(['error' => 'User 3 not found']);
-    }
-    
-    $tokens = \DB::table('oauth_access_tokens')->where('user_id', $user->id)->get();
+    $clients = \DB::table('oauth_clients')->get();
     
     return response()->json([
-        'user' => $user->toArray(),
-        'tokens' => $tokens->toArray(),
+        'clients' => $clients->toArray(),
     ]);
 });

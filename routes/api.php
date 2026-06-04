@@ -207,6 +207,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('posts/{post}/comments', [CommentController::class, 'index']);
         Route::post('posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:30,1');
         Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
+        Route::post('polls/{poll}/vote', [PostController::class, 'vote']);
 
         // Story system (Instagram-style)
         Route::get('stories', [StoryController::class, 'index']);

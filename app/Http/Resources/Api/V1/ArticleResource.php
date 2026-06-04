@@ -28,6 +28,8 @@ class ArticleResource extends JsonResource
             'published_at' => $this->published_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
+            'is_islamic' => (bool) $this->is_islamic,
+            'hadith_reference' => $this->hadith_reference,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'author' => new UserResource($this->whenLoaded('author')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),

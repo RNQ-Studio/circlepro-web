@@ -50,6 +50,8 @@ class UpdateArticleRequest extends FormRequest
             'content' => ['sometimes', 'required', 'string'],
             'featured_image' => ['nullable', 'string', 'max:255'],
             'status' => ['sometimes', Rule::enum(ArticleStatus::class)],
+            'is_islamic' => ['sometimes', 'boolean'],
+            'hadith_reference' => ['nullable', 'string'],
             'tags' => ['sometimes', 'array'],
             'tags.*' => ['integer', Rule::exists('tags', 'id')],
         ];

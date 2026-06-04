@@ -91,4 +91,64 @@ class FeedTest extends TestCase
         Passport::actingAs($author);
         $this->deleteJson("/api/v1/posts/{$postId}")->assertOk();
     }
+
+    public function test_create_post_with_media_and_poll_and_vote(): void
+    {
+        $user = User::factory()->create();
+        Passport::actingAs($user);
+
+        $postData = [
+            'body' => 'Post with media and poll',
+            'media' => [
+                ['url' => 'https://example.com/image1.jpg', 'type' => 'image', 'position' => 1],
+                ['url' => 'https://example.com/video1.mp4', 'type' => 'video', 'position' => 2],
+            ],
+            'poll' => [
+                'question' => 'What is your favorite bow type?',
+                'options' => ['Recurve', 'Compound', 'Barebow'],
+                'expires_at' => now()->addDays(2)->toIso8601String(),
+            ],
+        ];
+
+        $response = $this->postJson('/api/v1/posts', $postData)
+            ->assertCreated()
+            ->assertJsonPath('data.body', 'Post with media and poll')
+            ->assertJsonCount(2, 'data.media')
+            ->assertJsonPath('data.media.0.url', 'https://example.com/image1.jpg')
+            ->assertJsonPath('data.media.1.type', 'video')
+            ->assertJsonPath('data.poll.question', 'What is your favorite bow type?')
+            ->assertJsonCount(3, 'data.poll.options')
+            ->assertJsonPath('data.poll.total_votes', 0)
+            ->assertJsonPath('data.poll.user_voted_option_id', null);
+
+        $pollId = $response->json('data.poll.id');
+        $optionId = $response->json('data.poll.options.0.id');
+
+        // Cast vote
+        $this->postJson("/api/v1/polls/{$pollId}/vote", ['poll_option_id' => $optionId])
+            ->assertOk()
+            ->assertJsonPath('data.poll.total_votes', 1)
+            ->assertJsonPath('data.poll.user_voted_option_id', $optionId)
+            ->assertJsonPath('data.poll.options.0.votes_count', 1);
+    }
+
+    public function test_engagement_weighted_sorting(): void
+    {
+        $user = User::factory()->create();
+        Passport::actingAs($user);
+
+        // Post 1: 0 likes, 0 comments (score = 0)
+        $post1 = \App\Models\Post::factory()->create(['author_id' => $user->id, 'like_count' => 0, 'comment_count' => 0, 'created_at' => now()->subMinutes(10)]);
+        // Post 2: 5 likes, 2 comments (score = 20)
+        $post2 = \App\Models\Post::factory()->create(['author_id' => $user->id, 'like_count' => 5, 'comment_count' => 2, 'created_at' => now()->subMinutes(5)]);
+        // Post 3: 2 likes, 0 comments (score = 4)
+        $post3 = \App\Models\Post::factory()->create(['author_id' => $user->id, 'like_count' => 2, 'comment_count' => 0, 'created_at' => now()->subMinutes(2)]);
+
+        $response = $this->getJson('/api/v1/posts?sort=engagement')
+            ->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertEquals([$post2->id, $post3->id, $post1->id], array_slice($ids, 0, 3));
+    }
 }

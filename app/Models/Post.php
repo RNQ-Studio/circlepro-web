@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -73,6 +75,18 @@ class Post extends Model
     public function likes(): HasMany
     {
         return $this->hasMany(PostLike::class);
+    }
+
+    /** @return MorphMany<Media, $this> */
+    public function media(): MorphMany
+    {
+        return $this->morphMany(Media::class, 'mediable')->orderBy('position');
+    }
+
+    /** @return HasOne<Poll, $this> */
+    public function poll(): HasOne
+    {
+        return $this->hasOne(Poll::class);
     }
 
     /** @param Builder<Post> $query */

@@ -35,6 +35,13 @@ class PostResource extends JsonResource
             'comment_count' => $this->comment_count,
             'is_liked' => (bool) ($this->is_liked ?? false),
             'is_pinned' => $this->is_pinned,
+            'media' => $this->media->map(fn($m) => [
+                'id' => $m->id,
+                'url' => $m->url,
+                'type' => $m->type->value,
+                'position' => $m->position,
+            ]),
+            'poll' => $this->pollSnapshot($request),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
@@ -63,6 +70,41 @@ class PostResource extends JsonResource
             'bow_class' => $session->bow_class->value,
             'distance_category' => $session->distance_category->value,
             'is_personal_best' => $session->is_personal_best,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function pollSnapshot(Request $request): ?array
+    {
+        $poll = $this->poll;
+        if ($poll === null) {
+            return null;
+        }
+
+        $userId = $request->user()?->id;
+        $userVote = $userId ? \App\Models\PollVote::query()->where('poll_id', $poll->id)->where('user_id', $userId)->first() : null;
+        $userVotedOptionId = $userVote?->poll_option_id;
+
+        $options = $poll->options()->withCount('votes')->get()->map(function ($option) {
+            return [
+                'id' => $option->id,
+                'option_text' => $option->option_text,
+                'votes_count' => (int) $option->votes_count,
+            ];
+        });
+
+        $totalVotes = $options->sum('votes_count');
+
+        return [
+            'id' => $poll->id,
+            'question' => $poll->question,
+            'expires_at' => $poll->expires_at?->toIso8601String(),
+            'is_expired' => $poll->isExpired(),
+            'options' => $options,
+            'total_votes' => $totalVotes,
+            'user_voted_option_id' => $userVotedOptionId,
         ];
     }
 }

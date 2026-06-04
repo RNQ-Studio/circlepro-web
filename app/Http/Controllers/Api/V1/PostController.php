@@ -42,17 +42,25 @@ class PostController extends Controller
                         ->whereIn('organization_id', $myClubIds);
                 });
         })
-            ->with('author.profile')
+            ->with(['author.profile', 'media', 'poll.options'])
             ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $userId)]);
 
-        $posts = QueryBuilder::for($base)
+        $queryBuilder = QueryBuilder::for($base)
             ->allowedFilters(
                 AllowedFilter::exact('organization_id'),
                 AllowedFilter::exact('author_id'),
-            )
-            ->defaultSort('-created_at')
-            ->allowedSorts('created_at')
-            ->paginate(min(max((int) $request->integer('per_page', 20), 1), 100))
+            );
+
+        if ($request->query('sort') === 'engagement') {
+            $base->orderByDesc('is_pinned')
+                 ->orderByRaw('(like_count * 2 + comment_count * 5) desc')
+                 ->orderByDesc('created_at');
+        } else {
+            $queryBuilder->defaultSort('-created_at')
+                         ->allowedSorts('created_at');
+        }
+
+        $posts = $queryBuilder->paginate(min(max((int) $request->integer('per_page', 20), 1), 100))
             ->appends($request->query());
 
         return ApiResponse::success(PostResource::collection($posts));
@@ -80,8 +88,30 @@ class PostController extends Controller
             'shared_id' => $data['shared_id'] ?? null,
         ]);
 
+        if (!empty($data['media'])) {
+            foreach ($data['media'] as $mediaItem) {
+                $post->media()->create([
+                    'type' => $mediaItem['type'],
+                    'url' => $mediaItem['url'],
+                    'position' => $mediaItem['position'] ?? 0,
+                ]);
+            }
+        }
+
+        if (!empty($data['poll'])) {
+            $poll = $post->poll()->create([
+                'question' => $data['poll']['question'],
+                'expires_at' => $data['poll']['expires_at'] ?? null,
+            ]);
+            foreach ($data['poll']['options'] as $optionText) {
+                $poll->options()->create([
+                    'option_text' => $optionText,
+                ]);
+            }
+        }
+
         return ApiResponse::success(
-            new PostResource($post->load('author.profile')),
+            new PostResource($post->load(['author.profile', 'media', 'poll.options'])),
             'Post created',
             201,
         );
@@ -130,5 +160,27 @@ class PostController extends Controller
         }
 
         return ApiResponse::success(['liked' => false, 'like_count' => $post->refresh()->like_count]);
+    }
+
+    public function vote(Request $request, \App\Models\Poll $poll): JsonResponse
+    {
+        $data = $request->validate([
+            'poll_option_id' => ['required', 'ulid', \Illuminate\Validation\Rule::exists('poll_options', 'id')->where('poll_id', $poll->id)],
+        ]);
+
+        if ($poll->isExpired()) {
+            return ApiResponse::error('This poll has expired.', 422);
+        }
+
+        $userId = $request->user()->id;
+
+        \App\Models\PollVote::query()->updateOrCreate(
+            ['poll_id' => $poll->id, 'user_id' => $userId],
+            ['poll_option_id' => $data['poll_option_id']]
+        );
+
+        $post = $poll->post->load(['author.profile', 'media', 'poll.options']);
+
+        return ApiResponse::success(new PostResource($post), 'Vote cast successfully');
     }
 }

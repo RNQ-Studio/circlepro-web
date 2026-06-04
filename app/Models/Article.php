@@ -41,6 +41,8 @@ use Spatie\Activitylog\Traits\LogsActivity;
     'status',
     'published_at',
     'reading_time',
+    'is_islamic',
+    'hadith_reference',
 ])]
 class Article extends Model
 {
@@ -61,6 +63,7 @@ class Article extends Model
             'status' => ArticleStatus::class,
             'published_at' => 'datetime',
             'reading_time' => 'integer',
+            'is_islamic' => 'boolean',
         ];
     }
 

@@ -134,6 +134,49 @@ class ArticleTest extends TestCase
         $this->assertNotSoftDeleted('articles', ['id' => $article->getKey()]);
     }
 
+    public function test_create_and_filter_islamic_articles(): void
+    {
+        Passport::actingAs($this->userWithRole('admin'));
+
+        $category = Category::factory()->create();
+
+        $islamicArticleData = [
+            'category_id' => $category->id,
+            'title' => 'Sunnah Memanah',
+            'excerpt' => 'Keutamaan memanah.',
+            'content' => 'Belajarlah memanah karena memanah adalah sebaik-baik permainan kalian.',
+            'status' => 'published',
+            'is_islamic' => true,
+            'hadith_reference' => 'HR. Al-Bazzar dan Thabrani',
+        ];
+
+        $this->postJson('/api/v1/articles', $islamicArticleData)
+            ->assertCreated()
+            ->assertJsonPath('data.title', 'Sunnah Memanah')
+            ->assertJsonPath('data.is_islamic', true)
+            ->assertJsonPath('data.hadith_reference', 'HR. Al-Bazzar dan Thabrani');
+
+        // Create a regular article
+        Article::factory()->create([
+            'title' => 'Panahan Modern',
+            'is_islamic' => false,
+            'status' => ArticleStatus::Published,
+            'published_at' => now(),
+        ]);
+
+        // Filter by is_islamic = true
+        $this->getJson('/api/v1/articles?filter[is_islamic]=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Sunnah Memanah');
+
+        // Filter by is_islamic = false
+        $this->getJson('/api/v1/articles?filter[is_islamic]=0')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Panahan Modern');
+    }
+
     private function userWithRole(string $role): User
     {
         $user = User::factory()->create();

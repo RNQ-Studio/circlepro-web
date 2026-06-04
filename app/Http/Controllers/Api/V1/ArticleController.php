@@ -28,6 +28,7 @@ class ArticleController extends Controller
                 AllowedFilter::exact('category_id'),
                 AllowedFilter::exact('author_id'),
                 AllowedFilter::exact('status'),
+                AllowedFilter::exact('is_islamic'),
             )
             ->allowedSorts('title', 'status', 'published_at', 'created_at', 'updated_at')
             ->defaultSort('-published_at')

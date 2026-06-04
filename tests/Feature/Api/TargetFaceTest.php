@@ -15,6 +15,7 @@ class TargetFaceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(\Database\Seeders\OrganizationSeeder::class);
         $this->seed(TargetFaceSeeder::class);
     }
 
@@ -30,9 +31,11 @@ class TargetFaceTest extends TestCase
 
         $this->getJson('/api/v1/scoring/target-faces')
             ->assertOk()
-            ->assertJsonCount(6, 'data')
+            ->assertJsonCount(26, 'data')
             ->assertJsonPath('data.0.code', 'fita_122')
-            ->assertJsonPath('data.4.code', 'jemparingan');
+            ->assertJsonPath('data.0.organization.slug', 'perpani')
+            ->assertJsonPath('data.4.code', 'jemparingan')
+            ->assertJsonPath('data.4.organization.slug', 'perpatri');
     }
 
     public function test_user_can_get_bow_classes(): void

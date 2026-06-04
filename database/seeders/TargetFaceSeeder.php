@@ -264,10 +264,6 @@ class TargetFaceSeeder extends Seeder
                 ]);
             }
         }
-
-        // Delete any obsolete target faces not defined in this seeder (e.g. 'jemparingan')
-        $codes = collect($targets)->pluck('code')->toArray();
-        TargetFace::whereNotIn('code', $codes)->delete();
     }
 
     private function uploadLocalFile(string $localPath): ?string

@@ -16,7 +16,7 @@ class QuoteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $perPage = min(max((int) $request->integer('per_page', 15), 1), 100);
+        $perPage = min(max((int) $request->integer('per_page', 15), 1), 1000);
 
         $base = Quote::query();
 

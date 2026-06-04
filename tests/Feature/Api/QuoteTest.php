@@ -58,4 +58,46 @@ class QuoteTest extends TestCase
 
         $this->assertSoftDeleted('quotes', ['id' => $quoteId]);
     }
+
+    public function test_authenticated_user_can_love_and_unlove_quote(): void
+    {
+        $user = \App\Models\User::factory()->create();
+        \Laravel\Passport\Passport::actingAs($user);
+
+        $quote = Quote::factory()->create(['love_count' => 0]);
+
+        // Love
+        $this->postJson("/api/v1/quotes/{$quote->id}/love")
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'loved' => true,
+                    'love_count' => 1,
+                ]
+            ]);
+
+        $this->assertDatabaseHas('quote_loves', [
+            'quote_id' => $quote->id,
+            'user_id' => $user->id,
+        ]);
+        $this->assertEquals(1, $quote->refresh()->love_count);
+
+        // Unlove
+        $this->deleteJson("/api/v1/quotes/{$quote->id}/love")
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'loved' => false,
+                    'love_count' => 0,
+                ]
+            ]);
+
+        $this->assertDatabaseMissing('quote_loves', [
+            'quote_id' => $quote->id,
+            'user_id' => $user->id,
+        ]);
+        $this->assertEquals(0, $quote->refresh()->love_count);
+    }
 }

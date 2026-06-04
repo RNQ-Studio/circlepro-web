@@ -19,6 +19,8 @@ class QuoteLove extends Model
 
     public const UPDATED_AT = null;
 
+    protected $table = 'quote_loves';
+
     protected $fillable = ['quote_id', 'user_id'];
 
     /** @return BelongsTo<Quote, $this> */

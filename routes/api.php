@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\OtpController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\PostController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\StoryController;
 use App\Http\Controllers\Api\V1\QuoteController;
 use App\Http\Controllers\Api\V1\RatingController;
 use App\Http\Controllers\Api\V1\FollowController;
@@ -198,6 +199,11 @@ Route::prefix('v1')->group(function (): void {
         Route::get('posts/{post}/comments', [CommentController::class, 'index']);
         Route::post('posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:30,1');
         Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
+
+        // Story system (Instagram-style)
+        Route::get('stories', [StoryController::class, 'index']);
+        Route::post('stories', [StoryController::class, 'store'])->middleware('throttle:30,1');
+        Route::delete('stories/{story}', [StoryController::class, 'destroy']);
 
         /*
         |----------------------------------------------------------------------

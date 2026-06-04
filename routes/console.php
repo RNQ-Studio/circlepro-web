@@ -11,3 +11,5 @@ Artisan::command('inspire', function () {
 // Pembersihan asset dua fase. withoutOverlapping mencegah tumpang tindih bila eksekusi lama.
 Schedule::command('assets:soft-delete-expired')->dailyAt('01:00')->withoutOverlapping();
 Schedule::command('assets:hard-delete-expired')->dailyAt('02:00')->withoutOverlapping();
+Schedule::command('stories:clean-expired')->hourly()->withoutOverlapping();
+

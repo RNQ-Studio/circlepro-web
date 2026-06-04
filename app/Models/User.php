@@ -42,6 +42,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, EventRegistration> $registrations
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Story> $stories
  */
 #[Fillable(['name', 'username', 'full_name', 'email', 'password', 'is_active', 'system_role', 'avatar', 'phone', 'phone_verified_at', 'last_active_at'])]
 #[Hidden(['password', 'remember_token'])]
@@ -168,6 +169,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAu
     public function personalBests(): HasMany
     {
         return $this->hasMany(PersonalBest::class);
+    }
+
+    /** @return HasMany<Story, $this> */
+    public function stories(): HasMany
+    {
+        return $this->hasMany(Story::class);
     }
 
     /** @return HasMany<EventRegistration, $this> */

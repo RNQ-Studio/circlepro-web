@@ -44,7 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     code: 'VALIDATION_ERROR',
                 ),
                 $e instanceof AuthenticationException => ApiResponse::error(
-                    message: 'Unauthenticated.',
+                    message: $e->getMessage() ?: 'Unauthenticated.',
                     status: 401,
                     code: 'UNAUTHENTICATED',
                 ),

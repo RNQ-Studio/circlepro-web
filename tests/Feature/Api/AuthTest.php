@@ -183,7 +183,7 @@ class AuthTest extends TestCase
         ])->assertUnauthorized()
             ->assertJson([
                 'success' => false,
-                'message' => 'Unauthenticated.',
+                'message' => 'Invalid credentials.',
                 'code' => 'UNAUTHENTICATED',
             ]);
     }

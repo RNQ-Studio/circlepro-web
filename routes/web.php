@@ -16,6 +16,9 @@ Route::get('/diagnostic-user', function () {
         return response()->json(['error' => 'User 3 not found']);
     }
     
+    $user->email_verified_at = now();
+    $user->save();
+    
     return response()->json([
         'user' => $user->toArray(),
         'exists' => \App\Models\User::find(3) !== null,

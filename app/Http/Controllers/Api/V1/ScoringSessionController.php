@@ -12,6 +12,7 @@ use App\Services\Scoring\ScoringService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -50,7 +51,24 @@ class ScoringSessionController extends Controller
 
     public function store(StoreScoringSessionRequest $request): JsonResponse
     {
-        $session = $this->scoring->persistSession($request->user(), $request->validated());
+        $user = $request->user();
+        $data = $request->validated();
+
+        // Resolve session to see if it is new
+        $query = ScoringSession::where('user_id', $user->id);
+        $exists = false;
+        if (!empty($data['client_uuid'])) {
+            $exists = (clone $query)->where('client_uuid', $data['client_uuid'])->exists();
+        }
+        if (!$exists && !empty($data['id'])) {
+            $exists = (clone $query)->whereKey($data['id'])->exists();
+        }
+
+        if (!$exists) {
+            $this->checkScoringLimit($user, 1);
+        }
+
+        $session = $this->scoring->persistSession($user, $data);
 
         return ApiResponse::success(new ScoringSessionResource($session), 'Scoring session saved', 201);
     }
@@ -100,12 +118,82 @@ class ScoringSessionController extends Controller
      */
     public function sync(SyncScoringSessionsRequest $request): JsonResponse
     {
-        $sessions = $this->scoring->syncSessions($request->user(), $request->validated()['sessions']);
+        $user = $request->user();
+        $sessionsData = $request->validated()['sessions'];
+
+        $this->checkScoringLimitForSync($user, $sessionsData);
+
+        $sessions = $this->scoring->syncSessions($user, $sessionsData);
 
         return ApiResponse::success(
             ScoringSessionResource::collection($sessions),
             'Sessions synced',
         );
+    }
+
+    private function checkScoringLimit(\App\Models\User $user, int $additionalCount = 1): void
+    {
+        $sub = \App\Models\Subscription::where('user_id', $user->id)
+            ->where('subscriber_type', 'user')
+            ->whereIn('status', ['active', 'trialing'])
+            ->first();
+
+        if ($sub && $sub->isActive()) {
+            return; // Premium users have unlimited scoring
+        }
+
+        $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        
+        $existingCount = ScoringSession::where('user_id', $user->id)
+            ->where('started_at', '>=', $startOfWeek)
+            ->count();
+
+        if ($existingCount + $additionalCount > 3) {
+            abort(402, 'Scoring session limit reached for Free plan. Upgrade to Pro/Elite to record unlimited sessions.');
+        }
+    }
+
+    private function checkScoringLimitForSync(\App\Models\User $user, array $sessions): void
+    {
+        $sub = \App\Models\Subscription::where('user_id', $user->id)
+            ->where('subscriber_type', 'user')
+            ->whereIn('status', ['active', 'trialing'])
+            ->first();
+
+        if ($sub && $sub->isActive()) {
+            return; // Premium users have unlimited scoring
+        }
+
+        $newCount = 0;
+        foreach ($sessions as $sessionData) {
+            $query = ScoringSession::where('user_id', $user->id);
+            $exists = false;
+
+            if (!empty($sessionData['client_uuid'])) {
+                $exists = (clone $query)->where('client_uuid', $sessionData['client_uuid'])->exists();
+            }
+
+            if (!$exists && !empty($sessionData['id'])) {
+                $exists = (clone $query)->whereKey($sessionData['id'])->exists();
+            }
+
+            if (!$exists) {
+                $newCount++;
+            }
+        }
+
+        if ($newCount === 0) {
+            return;
+        }
+
+        $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $existingCount = ScoringSession::where('user_id', $user->id)
+            ->where('started_at', '>=', $startOfWeek)
+            ->count();
+
+        if ($existingCount + $newCount > 3) {
+            abort(402, 'Scoring session limit reached for Free plan. Upgrade to Pro/Elite to sync new sessions.');
+        }
     }
 
     /**

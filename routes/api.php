@@ -34,6 +34,9 @@ use App\Http\Controllers\Api\V1\SocialAuthController;
 use App\Http\Controllers\Api\V1\StoryController;
 use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\TargetFaceController;
+use App\Http\Controllers\Api\V1\MonetizationController;
+use App\Http\Controllers\Api\V1\AdController;
+use App\Http\Controllers\Api\V1\Admin\RevenueController;
 use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -239,5 +242,19 @@ Route::prefix('v1')->group(function (): void {
         // Glicko-2 Rating calculation & private rating routes
         Route::post('events/{event}/divisions/{division}/finalize-ratings', [RatingController::class, 'finalizeRatings']);
         Route::get('my-ratings', [RatingController::class, 'getMyRatings']);
+
+        // Monetization routes
+        Route::get('monetization/plans', [MonetizationController::class, 'plans']);
+        Route::get('monetization/subscription', [MonetizationController::class, 'subscription']);
+        Route::post('monetization/subscribe/google', [MonetizationController::class, 'subscribeGooglePlay']);
+        Route::post('monetization/subscribe/manual', [MonetizationController::class, 'subscribeManual']);
+        Route::post('clubs/{club}/subscription', [MonetizationController::class, 'clubSubscription']);
+        
+        // Ads routes
+        Route::get('ads', [AdController::class, 'index']);
+        Route::post('ads/{ad}/click', [AdController::class, 'click']);
+
+        // Admin revenue routes
+        Route::get('admin/revenue', [RevenueController::class, 'index']);
     });
 });

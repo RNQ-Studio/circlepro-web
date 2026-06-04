@@ -28,6 +28,7 @@ class ScoringSessionResource extends JsonResource
             'distance_m' => $this->distance_m,
             'environment' => $this->environment->value,
             'target_face_cm' => $this->target_face_cm,
+            'target_face_id' => $this->target_face_id,
             'num_ends' => $this->num_ends,
             'arrows_per_end' => $this->arrows_per_end,
             'status' => $this->status->value,

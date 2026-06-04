@@ -71,6 +71,7 @@ class ScoringSession extends Model
         'distance_m',
         'environment',
         'target_face_cm',
+        'target_face_id',
         'num_ends',
         'arrows_per_end',
         'status',
@@ -108,6 +109,12 @@ class ScoringSession extends Model
     public function equipmentProfile(): BelongsTo
     {
         return $this->belongsTo(EquipmentProfile::class);
+    }
+
+    /** @return BelongsTo<TargetFace, $this> */
+    public function targetFace(): BelongsTo
+    {
+        return $this->belongsTo(TargetFace::class);
     }
 
     /** @return HasMany<ScoringEnd, $this> */

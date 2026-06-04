@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\V1\ScoringSessionController;
 use App\Http\Controllers\Api\V1\SocialAuthController;
 use App\Http\Controllers\Api\V1\StoryController;
 use App\Http\Controllers\Api\V1\TagController;
+use App\Http\Controllers\Api\V1\TargetFaceController;
 use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -128,6 +129,9 @@ Route::prefix('v1')->group(function (): void {
         */
         Route::prefix('scoring')->group(function (): void {
             Route::apiResource('equipment-profiles', EquipmentProfileController::class);
+
+            Route::get('target-faces', [TargetFaceController::class, 'index']);
+            Route::get('bow-classes', [TargetFaceController::class, 'bowClasses']);
 
             Route::get('dashboard', [ScoringSessionController::class, 'dashboard']);
             Route::post('sessions/sync', [ScoringSessionController::class, 'sync'])

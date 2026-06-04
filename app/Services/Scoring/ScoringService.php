@@ -44,6 +44,7 @@ class ScoringService
                 'distance_m' => $data['distance_m'] ?? $session->distance_m,
                 'environment' => $data['environment'] ?? ($session->exists ? $session->environment->value : 'outdoor'),
                 'target_face_cm' => $data['target_face_cm'] ?? $session->target_face_cm,
+                'target_face_id' => $data['target_face_id'] ?? $session->target_face_id,
                 'num_ends' => $data['num_ends'] ?? $session->num_ends,
                 'arrows_per_end' => $data['arrows_per_end'] ?? $session->arrows_per_end,
                 'status' => $data['status'] ?? ($session->exists ? $session->status->value : ScoringSessionStatus::InProgress->value),
@@ -197,8 +198,16 @@ class ScoringService
             }
         }
 
+        $maxArrowValue = 10;
+        if ($session->target_face_id) {
+            $targetFace = \App\Models\TargetFace::find($session->target_face_id);
+            if ($targetFace && !empty($targetFace->scoring_rules)) {
+                $maxArrowValue = collect($targetFace->scoring_rules)->max('value') ?? 10;
+            }
+        }
+
         $session->total_score = $totalScore;
-        $session->max_possible_score = $session->num_ends * $session->arrows_per_end * 10;
+        $session->max_possible_score = $session->num_ends * $session->arrows_per_end * $maxArrowValue;
         $session->arrows_shot = $arrowsShot;
         $session->avg_per_arrow = $arrowsShot > 0 ? round($totalScore / $arrowsShot, 2) : null;
         $session->x_count = $xCount;

@@ -42,6 +42,7 @@ class ScoringSessionRules
             "{$prefix}distance_m" => [$req, 'integer', 'min:1', 'max:200'],
             "{$prefix}environment" => ['nullable', Rule::enum(ArcheryEnvironment::class)],
             "{$prefix}target_face_cm" => ['nullable', 'integer', 'min:1', 'max:200'],
+            "{$prefix}target_face_id" => ['nullable', 'ulid', Rule::exists('target_faces', 'id')],
             "{$prefix}num_ends" => [$req, 'integer', 'min:1', 'max:60'],
             "{$prefix}arrows_per_end" => [$req, 'integer', 'min:1', 'max:12'],
             "{$prefix}status" => ['nullable', Rule::enum(ScoringSessionStatus::class)],

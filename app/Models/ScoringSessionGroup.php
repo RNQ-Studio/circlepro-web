@@ -45,6 +45,7 @@ class ScoringSessionGroup extends Model
         'distance_m',
         'environment',
         'target_face_cm',
+        'target_face_id',
         'num_ends',
         'arrows_per_end',
         'join_code',
@@ -68,6 +69,12 @@ class ScoringSessionGroup extends Model
     public function host(): BelongsTo
     {
         return $this->belongsTo(User::class, 'host_user_id');
+    }
+
+    /** @return BelongsTo<TargetFace, $this> */
+    public function targetFace(): BelongsTo
+    {
+        return $this->belongsTo(TargetFace::class);
     }
 
     /** @return HasMany<ScoringSession, $this> */

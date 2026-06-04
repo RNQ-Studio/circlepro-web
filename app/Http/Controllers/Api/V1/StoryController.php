@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreStoryRequest;
+use App\Http\Resources\Api\V1\ProfileResource;
 use App\Http\Resources\Api\V1\StoryGroupResource;
 use App\Http\Resources\Api\V1\StoryResource;
 use App\Models\Story;
@@ -60,6 +61,7 @@ class StoryController extends Controller
             'asset_id' => $asset->id,
             'media_type' => $mediaType,
             'media_url' => $asset->getPublicUrl(),
+            'caption' => $request->input('caption'),
             'expires_at' => now()->addHours(24),
         ]);
 
@@ -82,5 +84,26 @@ class StoryController extends Controller
         $story->delete();
 
         return ApiResponse::success(null, 'Story deleted');
+    }
+
+    public function markAsViewed(Request $request, Story $story): JsonResponse
+    {
+        // Jangan catat view jika itu story sendiri
+        if ($story->user_id === $request->user()->id) {
+            return ApiResponse::success(null, 'Self views not recorded');
+        }
+
+        $story->viewers()->syncWithoutDetaching([$request->user()->id]);
+
+        return ApiResponse::success(null, 'Story marked as viewed');
+    }
+
+    public function viewers(Request $request, Story $story): JsonResponse
+    {
+        abort_unless($story->user_id === $request->user()->id, 403, 'Not your story.');
+
+        $viewers = $story->viewers()->with('profile')->get();
+
+        return ApiResponse::success(ProfileResource::collection($viewers));
     }
 }

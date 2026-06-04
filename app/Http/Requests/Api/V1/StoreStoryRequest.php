@@ -23,6 +23,11 @@ class StoreStoryRequest extends FormRequest
                 'max:51200', // 50 MB
                 'mimes:jpeg,jpg,png,webp,gif,mp4,mov,avi,webm',
             ],
+            'caption' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
         ];
     }
 }

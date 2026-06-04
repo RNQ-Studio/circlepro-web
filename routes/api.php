@@ -204,6 +204,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('stories', [StoryController::class, 'index']);
         Route::post('stories', [StoryController::class, 'store'])->middleware('throttle:30,1');
         Route::delete('stories/{story}', [StoryController::class, 'destroy']);
+        Route::post('stories/{story}/view', [StoryController::class, 'markAsViewed']);
+        Route::get('stories/{story}/viewers', [StoryController::class, 'viewers']);
 
         /*
         |----------------------------------------------------------------------

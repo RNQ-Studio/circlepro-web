@@ -183,4 +183,78 @@ class StoryTest extends TestCase
         $this->assertSame('hard_deleted', $asset->status->value);
         Storage::disk('gcs')->assertMissing($asset->path);
     }
+
+    public function test_user_can_upload_story_with_caption(): void
+    {
+        $user = User::factory()->create();
+        Passport::actingAs($user);
+
+        $file = UploadedFile::fake()->image('story_caption.jpg');
+        $captionText = 'Ini caption story saya';
+
+        $response = $this->postJson('/api/v1/stories', [
+            'file' => $file,
+            'caption' => $captionText,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.caption', $captionText);
+
+        $storyId = $response->json('data.id');
+        $this->assertDatabaseHas('stories', [
+            'id' => $storyId,
+            'caption' => $captionText,
+        ]);
+    }
+
+    public function test_user_can_view_another_users_story_and_owner_can_see_viewer_list(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+
+        // 1. Owner membuat story
+        Passport::actingAs($owner);
+        $file = UploadedFile::fake()->image('owner_story.jpg');
+        $storyId = $this->postJson('/api/v1/stories', ['file' => $file])
+            ->json('data.id');
+
+        // 2. Viewer melihat story tersebut
+        Passport::actingAs($viewer);
+        $this->postJson("/api/v1/stories/{$storyId}/view")
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        // Cek database
+        $this->assertDatabaseHas('story_views', [
+            'story_id' => $storyId,
+            'user_id' => $viewer->id,
+        ]);
+
+        // 3. Viewer melihat lagi (idempotency check)
+        $this->postJson("/api/v1/stories/{$storyId}/view")
+            ->assertOk();
+
+        // Jumlah record di db harus tetap 1 (unique constraint/sync)
+        $this->assertEquals(1, \DB::table('story_views')->where('story_id', $storyId)->count());
+
+        // 4. Owner melihat story sendiri (harus diabaikan / tidak dicatat)
+        Passport::actingAs($owner);
+        $this->postJson("/api/v1/stories/{$storyId}/view")
+            ->assertOk();
+        $this->assertDatabaseMissing('story_views', [
+            'story_id' => $storyId,
+            'user_id' => $owner->id,
+        ]);
+
+        // 5. Orang lain mencoba melihat daftar penonton -> forbidden/unauthorized
+        Passport::actingAs($viewer);
+        $this->getJson("/api/v1/stories/{$storyId}/viewers")
+            ->assertForbidden();
+
+        // 6. Owner mengambil daftar penonton -> ok
+        Passport::actingAs($owner);
+        $this->getJson("/api/v1/stories/{$storyId}/viewers")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $viewer->id);
+    }
 }

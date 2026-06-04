@@ -45,7 +45,32 @@ class TargetFaceForm
                     ->image()
                     ->maxSize(5120)
                     ->dehydrated(false)
-                    ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, callable $set, $record) {
+                    ->live()
+                    ->formatStateUsing(function (?\App\Models\TargetFace $record) {
+                        if (! $record || ! $record->image_path) {
+                            return null;
+                        }
+                        $asset = \App\Models\Asset::where('url', $record->image_path)->first();
+                        return $asset?->id;
+                    })
+                    ->afterStateUpdated(function ($state, callable $set, ?\App\Models\TargetFace $record) {
+                        if ($state instanceof TemporaryUploadedFile) {
+                            $asset = app(\App\Services\AssetUploadService::class)->upload(
+                                file: $state,
+                                type: 'target_face',
+                                userId: auth()->id(),
+                            );
+                            $set('image_path', $asset->url);
+                            $set('image_upload', $asset->id);
+                            
+                            if ($record) {
+                                $record->update([
+                                    'image_path' => $asset->url,
+                                ]);
+                            }
+                        }
+                    })
+                    ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, callable $set, ?\App\Models\TargetFace $record) {
                         $asset = app(\App\Services\AssetUploadService::class)->upload(
                             file: $file,
                             type: 'target_face',
@@ -60,6 +85,42 @@ class TargetFaceForm
                         }
                         
                         return $asset->id;
+                    })
+                    ->getUploadedFileUsing(function ($file) {
+                        if (! $file) {
+                            return null;
+                        }
+                        if (\Illuminate\Support\Str::isUuid($file)) {
+                            $asset = \App\Models\Asset::find($file);
+                            if ($asset) {
+                                return [
+                                    'name' => $asset->original_filename,
+                                    'size' => $asset->size,
+                                    'type' => $asset->mime_type,
+                                    'url' => $asset->url,
+                                ];
+                            }
+                        }
+                        return null;
+                    })
+                    ->deleteUploadedFileUsing(function ($state, callable $set, ?\App\Models\TargetFace $record) {
+                        if (! $state) {
+                            return;
+                        }
+                        $set('image_path', null);
+                        
+                        if ($record) {
+                            $record->update([
+                                'image_path' => null,
+                            ]);
+                        }
+                        
+                        if (\Illuminate\Support\Str::isUuid($state)) {
+                            $asset = \App\Models\Asset::find($state);
+                            if ($asset) {
+                                app(\App\Services\AssetDeletionService::class)->hardDelete($asset);
+                            }
+                        }
                     }),
                 Placeholder::make('image_preview')
                     ->label('Pratinjau Gambar')

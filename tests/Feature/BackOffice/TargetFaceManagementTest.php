@@ -55,6 +55,35 @@ class TargetFaceManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_uploading_image_updates_database_immediately(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $targetFace = TargetFace::create([
+            'code' => 'test_face_target_upload',
+            'name' => 'Test Face Target Upload',
+            'image_path' => 'old_path.png',
+            'scoring_rules' => [
+                ['value' => 10, 'label' => '10', 'color' => '#FFC107'],
+            ],
+            'used_count' => 0,
+        ]);
+
+        \Illuminate\Support\Facades\Storage::fake('gcs'); // since the upload service resolves disk as 'gcs' in tests
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('new_face.png');
+
+        \Livewire\Livewire::actingAs($admin)
+            ->test(\App\Filament\Resources\TargetFaces\Pages\EditTargetFace::class, [
+                'record' => $targetFace->getKey(),
+            ])
+            ->set('data.image_upload', $file);
+
+        $targetFace->refresh();
+        $this->assertNotNull($targetFace->image_path);
+        $this->assertNotEquals('old_path.png', $targetFace->image_path);
+        $this->assertStringEndsWith('.png', $targetFace->image_path);
+    }
+
     private function userWithRole(string $role): User
     {
         $user = User::factory()->create();

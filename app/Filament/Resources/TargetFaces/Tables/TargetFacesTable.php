@@ -15,9 +15,12 @@ class TargetFacesTable
     {
         return $table
             ->columns([
-                TextColumn::make('code')
-                    ->searchable()
-                    ->sortable(),
+                \Filament\Tables\Columns\ImageColumn::make('image_path')
+                    ->label('Gambar')
+                    ->circular()
+                    ->state(fn ($record) => $record->image_path ? (str_starts_with($record->image_path, 'http') ? $record->image_path : asset($record->image_path)) : null)
+                    ->disk(null)
+                    ->size(40),
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
@@ -34,6 +37,7 @@ class TargetFacesTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('used_count', 'desc')
             ->recordActions([
                 EditAction::make(),
                 DeleteAction::make(),

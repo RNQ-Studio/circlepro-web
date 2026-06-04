@@ -4,6 +4,7 @@ namespace App\Filament\Resources\TargetFaces\Schemas;
 
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -35,7 +36,14 @@ class TargetFaceForm
                 TextInput::make('image_path')
                     ->label('Image Path / URL')
                     ->maxLength(255)
-                    ->nullable(),
+                    ->nullable()
+                    ->live(onBlur: true),
+                Placeholder::make('image_preview')
+                    ->label('Pratinjau Gambar')
+                    ->content(fn (callable $get) => $get('image_path')
+                        ? new \Illuminate\Support\HtmlString('<img src="' . (str_starts_with($get('image_path'), 'http') ? $get('image_path') : asset($get('image_path'))) . '" style="max-height: 120px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); background: #f3f4f6; padding: 4px;" />')
+                        : 'Tidak ada pratinjau'
+                    ),
                 TextInput::make('used_count')
                     ->numeric()
                     ->default(0)

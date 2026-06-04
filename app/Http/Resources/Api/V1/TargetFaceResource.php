@@ -18,6 +18,7 @@ class TargetFaceResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'organization_id' => $this->organization_id,
             'code' => $this->code,
             'name' => $this->name,
             'image_path' => $this->image_path,

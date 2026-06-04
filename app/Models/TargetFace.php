@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property string $id
+ * @property string|null $organization_id
  * @property string $code
  * @property string $name
  * @property string|null $image_path
@@ -21,6 +22,7 @@ class TargetFace extends Model
 
     protected $fillable = [
         'id',
+        'organization_id',
         'code',
         'name',
         'image_path',
@@ -32,5 +34,13 @@ class TargetFace extends Model
         return [
             'scoring_rules' => 'array',
         ];
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Organization, $this>
+     */
+    public function organization(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 }

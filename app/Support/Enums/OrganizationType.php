@@ -11,7 +11,7 @@ enum OrganizationType: string
 {
     case Platform = 'platform';
     case Club = 'club';
-    case Federation = 'federation';
+    case Association = 'association';
     case EventOrganizer = 'event_organizer';
     case Shop = 'shop';
     case Partner = 'partner';

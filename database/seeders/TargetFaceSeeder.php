@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Organization;
 use App\Models\TargetFace;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -10,6 +11,9 @@ class TargetFaceSeeder extends Seeder
 {
     public function run(): void
     {
+        $perpani = Organization::where('slug', 'perpani')->first();
+        $fespati = Organization::where('slug', 'fespati')->first();
+
         $fitaRules = [
             ['value' => 10, 'label' => 'X', 'color' => '#FFC107', 'is_x' => true],
             ['value' => 10, 'label' => '10', 'color' => '#FFC107'],
@@ -31,24 +35,28 @@ class TargetFaceSeeder extends Seeder
                 'name' => 'FITA / WA (122cm)',
                 'image_path' => 'assets/images/targets/target_fita_10_ring.png',
                 'scoring_rules' => $fitaRules,
+                'organization_id' => $perpani?->id,
             ],
             [
                 'code' => 'fita_80',
                 'name' => 'FITA / WA (80cm)',
                 'image_path' => 'assets/images/targets/target_fita_10_ring.png',
                 'scoring_rules' => $fitaRules,
+                'organization_id' => $perpani?->id,
             ],
             [
                 'code' => 'fita_60',
                 'name' => 'FITA / WA (60cm)',
                 'image_path' => 'assets/images/targets/target_fita_10_ring.png',
                 'scoring_rules' => $fitaRules,
+                'organization_id' => $perpani?->id,
             ],
             [
                 'code' => 'fita_40',
                 'name' => 'FITA / WA (40cm)',
                 'image_path' => 'assets/images/targets/target_fita_10_ring.png',
                 'scoring_rules' => $fitaRules,
+                'organization_id' => $perpani?->id,
             ],
             [
                 'code' => 'jemparingan',
@@ -59,6 +67,7 @@ class TargetFaceSeeder extends Seeder
                     ['value' => 1, 'label' => 'Awak (1)', 'color' => '#FAFAFA'],
                     ['value' => 0, 'label' => 'M', 'color' => '#E57373', 'is_miss' => true],
                 ],
+                'organization_id' => $fespati?->id,
             ],
             [
                 'code' => 'las_vegas_3spot',
@@ -73,6 +82,7 @@ class TargetFaceSeeder extends Seeder
                     ['value' => 6, 'label' => '6', 'color' => '#1E88E5'],
                     ['value' => 0, 'label' => 'M', 'color' => '#E57373', 'is_miss' => true],
                 ],
+                'organization_id' => $perpani?->id,
             ],
         ];
 
@@ -84,6 +94,7 @@ class TargetFaceSeeder extends Seeder
                     'name' => $t['name'],
                     'image_path' => $t['image_path'],
                     'scoring_rules' => $t['scoring_rules'],
+                    'organization_id' => $t['organization_id'],
                 ]
             );
         }

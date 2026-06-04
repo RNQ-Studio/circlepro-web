@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             AppConfigSeeder::class,
             PlatformOrganizationSeeder::class,
+            OrganizationSeeder::class,
             TargetFaceSeeder::class,
         ]);
 

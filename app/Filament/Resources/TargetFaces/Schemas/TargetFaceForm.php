@@ -4,12 +4,14 @@ namespace App\Filament\Resources\TargetFaces\Schemas;
 
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class TargetFaceForm
 {
@@ -35,9 +37,23 @@ class TargetFaceForm
                     ->nullable(),
                 TextInput::make('image_path')
                     ->label('Image Path / URL')
-                    ->maxLength(255)
+                    ->maxLength(2048)
                     ->nullable()
                     ->live(onBlur: true),
+                FileUpload::make('image_upload')
+                    ->label('Unggah Gambar Baru')
+                    ->image()
+                    ->maxSize(5120)
+                    ->dehydrated(false)
+                    ->saveUploadedFileUsing(function (TemporaryUploadedFile $file, callable $set) {
+                        $asset = app(\App\Services\AssetUploadService::class)->upload(
+                            file: $file,
+                            type: 'target_face',
+                            userId: auth()->id(),
+                        );
+                        $set('image_path', $asset->url);
+                        return $asset->id;
+                    }),
                 Placeholder::make('image_preview')
                     ->label('Pratinjau Gambar')
                     ->content(fn (callable $get) => $get('image_path')

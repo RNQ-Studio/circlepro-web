@@ -22,6 +22,8 @@ class QuoteResource extends JsonResource
             'author' => $this->author,
             'source' => $this->source,
             'is_active' => $this->is_active,
+            'love_count' => $this->love_count,
+            'is_loved' => (bool) ($this->is_loved ?? false),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

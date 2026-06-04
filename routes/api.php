@@ -104,6 +104,10 @@ Route::prefix('v1')->group(function (): void {
     Route::get('users/{user}/ratings/{rating}/history', [RatingController::class, 'getRatingHistory']);
 
     Route::middleware(['auth:api', 'check.maintenance'])->group(function (): void {
+        // Quote love/unlove (authenticated)
+        Route::post('quotes/{quote}/love', [QuoteController::class, 'love']);
+        Route::delete('quotes/{quote}/love', [QuoteController::class, 'unlove']);
+
         Route::post('assets/upload', [AssetController::class, 'upload'])->middleware('throttle:30,1');
 
         Route::apiResource('categories', CategoryController::class);

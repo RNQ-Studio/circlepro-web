@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Spatie\Activitylog\LogOptions;
@@ -18,6 +19,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property string $author
  * @property string|null $source
  * @property bool $is_active
+ * @property int $love_count
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -58,5 +60,11 @@ class Quote extends Model
             $query->where('text', 'ilike', "%{$term}%")
                 ->orWhere('author', 'ilike', "%{$term}%");
         });
+    }
+
+    /** @return HasMany<QuoteLove, $this> */
+    public function loves(): HasMany
+    {
+        return $this->hasMany(QuoteLove::class);
     }
 }

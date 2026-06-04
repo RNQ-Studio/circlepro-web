@@ -15,7 +15,9 @@ class TargetFaceController extends Controller
      */
     public function index(): JsonResponse
     {
-        $targetFaces = TargetFace::with('organization')->get();
+        $targetFaces = TargetFace::with('organization')
+            ->orderBy('total_participants', 'desc')
+            ->get();
 
         return ApiResponse::success(TargetFaceResource::collection($targetFaces));
     }

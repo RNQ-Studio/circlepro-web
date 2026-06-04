@@ -275,22 +275,49 @@ class TargetFaceSeeder extends Seeder
             ],
         ];
 
+        $participantCounts = [
+            'perpatri_10ring' => 2275,
+            '6ring_fespati' => 1400,
+            'fetih_kupasi' => 593,
+            'perpatri_nj_horsebow' => 582,
+            '6ring_80cm_perpani' => 246,
+            'megamendung_fespati' => 232,
+            'bandul_merahkuningputih' => 197,
+            'pordasi_hexagon4' => 132,
+            'bandul_merahputih' => 89,
+            'laga_muharram_temboro' => 80,
+            'pordasi_purwakarta_anak2' => 64,
+            'pordasi_60x60' => 50,
+            'pordasi_hexagon_horse' => 46,
+            'pordasi_purwakarta_dewasa' => 34,
+            'fast_shooting_pordasi' => 33,
+            'tameng_majapahit_kpbi' => 24,
+            'gunungan_perdana' => 23,
+            'hit_n_miss' => 11,
+            'rajawali_kpbi' => 10,
+            'gonjang_ganjing_kpbi' => 10,
+        ];
+
         foreach ($targets as $t) {
-            $existing = TargetFace::where('code', $t['code'])->first();
+            $code = $t['code'];
+            $totalParticipants = $participantCounts[$code] ?? 0;
+            $existing = TargetFace::where('code', $code)->first();
             if ($existing) {
                 $existing->update([
                     'name' => $t['name'],
                     'image_path' => $t['image_path'],
                     'scoring_rules' => $t['scoring_rules'],
                     'organization_id' => $t['organization_id'],
+                    'total_participants' => $totalParticipants,
                 ]);
             } else {
                 TargetFace::create([
-                    'code' => $t['code'],
+                    'code' => $code,
                     'name' => $t['name'],
                     'image_path' => $t['image_path'],
                     'scoring_rules' => $t['scoring_rules'],
                     'organization_id' => $t['organization_id'],
+                    'total_participants' => $totalParticipants,
                 ]);
             }
         }

@@ -29,13 +29,18 @@ class TargetFaceTest extends TestCase
     {
         Passport::actingAs(User::factory()->create());
 
-        $this->getJson('/api/v1/scoring/target-faces')
+        $response = $this->getJson('/api/v1/scoring/target-faces')
             ->assertOk()
-            ->assertJsonCount(26, 'data')
-            ->assertJsonPath('data.0.code', 'fita_122')
-            ->assertJsonPath('data.0.organization.slug', 'perpani')
-            ->assertJsonPath('data.4.code', 'jemparingan')
-            ->assertJsonPath('data.4.organization.slug', 'perpatri');
+            ->assertJsonCount(26, 'data');
+
+        $data = $response->json('data');
+
+        for ($i = 0; $i < count($data) - 1; $i++) {
+            $this->assertTrue(
+                $data[$i]['total_participants'] >= $data[$i + 1]['total_participants'],
+                "Index {$i} ({$data[$i]['code']} count: {$data[$i]['total_participants']}) has fewer participants than index " . ($i + 1) . " ({$data[$i+1]['code']} count: {$data[$i+1]['total_participants']})"
+            );
+        }
     }
 
     public function test_user_can_get_bow_classes(): void

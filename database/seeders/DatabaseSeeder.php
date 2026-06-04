@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             PlatformOrganizationSeeder::class,
             OrganizationSeeder::class,
             TargetFaceSeeder::class,
+            QuoteSeeder::class,
         ]);
 
         // Region data (249,036 records) is opt-in to avoid slow default seeds.

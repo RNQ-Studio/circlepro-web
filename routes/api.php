@@ -96,7 +96,7 @@ Route::prefix('v1')->group(function (): void {
         });
     });
 
-    Route::apiResource('quotes', QuoteController::class);
+    Route::apiResource('quotes', QuoteController::class)->only(['index', 'show']);
 
     // Public leaderboard & rating lookup routes
     Route::get('leaderboard', [RatingController::class, 'getLeaderboard']);

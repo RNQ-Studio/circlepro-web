@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\V1\StoreQuoteRequest;
-use App\Http\Requests\Api\V1\UpdateQuoteRequest;
 use App\Http\Resources\Api\V1\QuoteResource;
 use App\Models\Quote;
 use App\Support\ApiResponse;
@@ -34,29 +32,9 @@ class QuoteController extends Controller
         return ApiResponse::success(QuoteResource::collection($quotes));
     }
 
-    public function store(StoreQuoteRequest $request): JsonResponse
-    {
-        $quote = Quote::query()->create($request->validated());
-
-        return ApiResponse::success(new QuoteResource($quote), 'Quote created', 201);
-    }
-
     public function show(Quote $quote): JsonResponse
     {
         return ApiResponse::success(new QuoteResource($quote));
     }
-
-    public function update(UpdateQuoteRequest $request, Quote $quote): JsonResponse
-    {
-        $quote->update($request->validated());
-
-        return ApiResponse::success(new QuoteResource($quote->refresh()), 'Quote updated');
-    }
-
-    public function destroy(Quote $quote): JsonResponse
-    {
-        $quote->delete();
-
-        return ApiResponse::success(null, 'Quote deleted');
-    }
 }
+

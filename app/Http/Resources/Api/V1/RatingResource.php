@@ -14,7 +14,10 @@ class RatingResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        // Resolve rating band/title
+        // Resolve rating band/title. first() may return null when no band
+        // matches the display_rating, hence the defensive ?-> + ?? defaults
+        // below (larastan misinfers this builder chain as non-null; see
+        // phpstan.neon ignoreErrors).
         $band = RatingBand::where(function ($query) {
             $query->where('organization_id', $this->organization_id)
                 ->orWhereNull('organization_id');

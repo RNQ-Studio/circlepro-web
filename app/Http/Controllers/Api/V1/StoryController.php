@@ -13,6 +13,7 @@ use App\Services\AssetDeletionService;
 use App\Services\AssetUploadService;
 use App\Support\ApiResponse;
 use App\Support\Enums\MediaType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -26,7 +27,8 @@ class StoryController extends Controller
     public function index(Request $request): JsonResponse
     {
         $users = User::query()
-            ->whereHas('stories', function ($query) {
+            ->whereHas('stories', function (Builder $query): void {
+                /** @var Builder<Story> $query */
                 $query->active();
             })
             ->with(['profile', 'stories' => function ($query) {

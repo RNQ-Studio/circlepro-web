@@ -55,6 +55,7 @@ class AdController extends Controller
     public function click(Request $request, Ad $ad): JsonResponse
     {
         $ad->increment('click_count');
+
         return ApiResponse::success(['click_url' => $ad->click_url], 'Ad click tracked');
     }
 }

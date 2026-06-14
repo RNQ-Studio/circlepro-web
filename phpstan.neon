@@ -7,6 +7,19 @@ parameters:
 
     level: 5
 
+    # Eloquent relation PHPDocs over-assert non-nullability (e.g. a belongsTo is
+    # typed as the related model, never null). Defensive null/instanceof checks
+    # against such PHPDoc-derived types would otherwise be flagged as
+    # always-true/false. Keep the guards; don't trust PHPDoc types as certain.
+    treatPhpDocTypesAsCertain: false
+
     ignoreErrors:
+        # RatingBand lookup uses Builder::first(), which is nullable at runtime
+        # (no band may match a given display_rating). Larastan misinfers this
+        # builder chain as non-null, flagging the defensive ?->/?? as redundant.
+        # Keep the runtime guard; ignore the false positive.
+        -
+            message: '#Using nullsafe property access .* on left side of \?\? is unnecessary#'
+            path: app/Http/Resources/Api/V1/RatingResource.php
 
     excludePaths:

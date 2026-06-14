@@ -32,7 +32,7 @@ class Follow extends Pivot
         });
     }
 
-    public function getUpdatedAtColumn()
+    public function getUpdatedAtColumn(): ?string
     {
         return null;
     }

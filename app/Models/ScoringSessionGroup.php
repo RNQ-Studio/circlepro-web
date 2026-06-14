@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Support\Enums\ArcheryEnvironment;
 use App\Support\Enums\DistanceCategory;
 use App\Support\Enums\ScoringSessionStatus;
+use Database\Factories\ScoringSessionGroupFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property int $distance_m
  * @property ArcheryEnvironment $environment
  * @property int|null $target_face_cm
+ * @property string|null $target_face_id
  * @property int $num_ends
  * @property int $arrows_per_end
  * @property string $join_code
@@ -31,9 +34,14 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
+ * @property-read User $host
+ * @property-read Collection<int, ScoringSession> $participants
+ * @property-read Collection<int, ScoringSession> $sessions
+ * @property-read Collection<int, ScoringSessionClaim> $claims
  */
 class ScoringSessionGroup extends Model
 {
+    /** @use HasFactory<ScoringSessionGroupFactory> */
     use HasFactory, HasUlids, SoftDeletes;
 
     protected $fillable = [
@@ -77,9 +85,31 @@ class ScoringSessionGroup extends Model
         return $this->belongsTo(TargetFace::class);
     }
 
-    /** @return HasMany<ScoringSession, $this> */
+    /**
+     * Participant rows of this group. Each participant IS a scoring_sessions
+     * row (owner or guest) — the binder philosophy (§1).
+     *
+     * @return HasMany<ScoringSession, $this>
+     */
+    public function participants(): HasMany
+    {
+        return $this->hasMany(ScoringSession::class);
+    }
+
+    /**
+     * Alias of {@see participants()} kept for readability where the rows are
+     * referred to as sessions rather than participants.
+     *
+     * @return HasMany<ScoringSession, $this>
+     */
     public function sessions(): HasMany
     {
         return $this->hasMany(ScoringSession::class);
+    }
+
+    /** @return HasMany<ScoringSessionClaim, $this> */
+    public function claims(): HasMany
+    {
+        return $this->hasMany(ScoringSessionClaim::class);
     }
 }

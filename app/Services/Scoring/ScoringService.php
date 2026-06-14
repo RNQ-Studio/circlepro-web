@@ -4,6 +4,7 @@ namespace App\Services\Scoring;
 
 use App\Models\PersonalBest;
 use App\Models\ScoringSession;
+use App\Models\TargetFace;
 use App\Models\User;
 use App\Services\GamificationService;
 use App\Support\Enums\ScoringSessionStatus;
@@ -71,23 +72,50 @@ class ScoringService
 
             if ($session->status === ScoringSessionStatus::Completed) {
                 $this->evaluatePersonalBest($session);
-
-                try {
-                    $gamification = app(GamificationService::class);
-                    $gamification->recordSessionCompletion(
-                        $user,
-                        $session->arrows_shot,
-                        (bool) $session->is_personal_best
-                    );
-                } catch (\Exception $e) {
-                    \Log::error('Gamification reward error: '.$e->getMessage());
-                }
+                $this->awardSessionGamification($session);
             }
 
             $session->save();
 
             return $session->load('ends.arrows');
         });
+    }
+
+    /**
+     * Replace an existing session's ends/arrows and recompute its cached
+     * aggregates — WITHOUT touching ownership, status or personal-best. Used by
+     * group participant scoring (Sprint 03), where the row may be a guest
+     * (user_id NULL) recorded by the host. Last-write-wins, mirroring solo
+     * scoring's replace semantics.
+     *
+     * @param  array<int, array<string, mixed>>  $ends
+     */
+    public function replaceParticipantEnds(ScoringSession $session, array $ends): void
+    {
+        $this->replaceEnds($session, $ends);
+        $this->recomputeAggregates($session);
+    }
+
+    /**
+     * Award gamification (points/streak) for a completed session. No-op for a
+     * guest row (user_id NULL): a session without an owner never feeds anyone's
+     * gamification (§3.2 binder integrity). Failures are logged, never fatal.
+     */
+    public function awardSessionGamification(ScoringSession $session): void
+    {
+        if ($session->user_id === null) {
+            return;
+        }
+
+        try {
+            app(GamificationService::class)->recordSessionCompletion(
+                $session->user,
+                $session->arrows_shot,
+                (bool) $session->is_personal_best,
+            );
+        } catch (\Exception $e) {
+            \Log::error('Gamification reward error: '.$e->getMessage());
+        }
     }
 
     /**
@@ -200,8 +228,8 @@ class ScoringService
 
         $maxArrowValue = 10;
         if ($session->target_face_id) {
-            $targetFace = \App\Models\TargetFace::find($session->target_face_id);
-            if ($targetFace && !empty($targetFace->scoring_rules)) {
+            $targetFace = TargetFace::find($session->target_face_id);
+            if ($targetFace && ! empty($targetFace->scoring_rules)) {
                 $maxArrowValue = collect($targetFace->scoring_rules)->max('value') ?? 10;
             }
         }

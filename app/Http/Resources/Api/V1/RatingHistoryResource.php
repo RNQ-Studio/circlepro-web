@@ -35,7 +35,7 @@ class RatingHistoryResource extends JsonResource
             'is_manual_override' => $this->is_manual_override,
             'event_id' => $this->eventDivision?->event_id,
             'event_name' => $this->eventDivision?->event?->title,
-            'division_name' => $this->eventDivision?->displayName,
+            'division_name' => $this->eventDivision?->display_name,
             'computed_at' => $this->computed_at->toIso8601String(),
         ];
     }

@@ -2,12 +2,35 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $subscription_plan_id
+ * @property string $subscriber_type
+ * @property int|null $user_id
+ * @property string|null $organization_id
+ * @property string $status
+ * @property string $provider
+ * @property string|null $provider_subscription_id
+ * @property Carbon|null $current_period_start
+ * @property Carbon|null $current_period_end
+ * @property Carbon|null $trial_ends_at
+ * @property Carbon|null $grace_ends_at
+ * @property Carbon|null $cancelled_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read SubscriptionPlan $plan
+ * @property-read User|null $user
+ * @property-read Organization|null $organization
+ * @property-read Collection<int, SubscriptionInvoice> $invoices
+ */
 class Subscription extends Model
 {
     use HasFactory, HasUlids;

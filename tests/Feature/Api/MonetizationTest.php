@@ -21,7 +21,7 @@ class MonetizationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->seed(RolePermissionSeeder::class);
 
         // Seed initial plans
@@ -50,6 +50,7 @@ class MonetizationTest extends TestCase
     {
         $user = User::factory()->create();
         $user->assignRole($role);
+
         return $user;
     }
 
@@ -205,8 +206,8 @@ class MonetizationTest extends TestCase
                     'mrr',
                     'active_subscribers',
                     'plans_breakdown',
-                    'revenue'
-                ]
+                    'revenue',
+                ],
             ]);
     }
 }

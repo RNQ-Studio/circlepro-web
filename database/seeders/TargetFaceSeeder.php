@@ -2,9 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Models\Asset;
 use App\Models\Organization;
 use App\Models\TargetFace;
+use App\Services\AssetUploadService;
+use App\Support\Enums\AssetStatus;
 use Illuminate\Database\Seeder;
+use Illuminate\Http\UploadedFile;
 
 class TargetFaceSeeder extends Seeder
 {
@@ -235,7 +239,7 @@ class TargetFaceSeeder extends Seeder
             $imagePath = $t['image_path'];
             if ($imagePath && ! str_starts_with($imagePath, 'http')) {
                 if (app()->runningUnitTests()) {
-                    $imagePath = 'http://localhost/storage/testing/' . basename($imagePath);
+                    $imagePath = 'http://localhost/storage/testing/'.basename($imagePath);
                 } else {
                     $uploadedUrl = $this->uploadLocalFile($imagePath);
                     if ($uploadedUrl) {
@@ -274,8 +278,8 @@ class TargetFaceSeeder extends Seeder
         }
 
         $filename = basename($fullPath);
-        $existingAsset = \App\Models\Asset::where('original_filename', $filename)
-            ->where('status', \App\Support\Enums\AssetStatus::Active)
+        $existingAsset = Asset::where('original_filename', $filename)
+            ->where('status', AssetStatus::Active)
             ->first();
 
         if ($existingAsset) {
@@ -283,7 +287,7 @@ class TargetFaceSeeder extends Seeder
         }
 
         $mime = mime_content_type($fullPath) ?: 'image/png';
-        $file = new \Illuminate\Http\UploadedFile(
+        $file = new UploadedFile(
             path: $fullPath,
             originalName: $filename,
             mimeType: $mime,
@@ -291,7 +295,7 @@ class TargetFaceSeeder extends Seeder
             test: true
         );
 
-        $asset = app(\App\Services\AssetUploadService::class)->upload(
+        $asset = app(AssetUploadService::class)->upload(
             file: $file,
             type: 'target_face',
             userId: null

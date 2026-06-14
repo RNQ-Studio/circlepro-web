@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Post;
 use App\Models\ScoringSession;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -138,11 +139,11 @@ class FeedTest extends TestCase
         Passport::actingAs($user);
 
         // Post 1: 0 likes, 0 comments (score = 0)
-        $post1 = \App\Models\Post::factory()->create(['author_id' => $user->id, 'like_count' => 0, 'comment_count' => 0, 'created_at' => now()->subMinutes(10)]);
+        $post1 = Post::factory()->create(['author_id' => $user->id, 'like_count' => 0, 'comment_count' => 0, 'created_at' => now()->subMinutes(10)]);
         // Post 2: 5 likes, 2 comments (score = 20)
-        $post2 = \App\Models\Post::factory()->create(['author_id' => $user->id, 'like_count' => 5, 'comment_count' => 2, 'created_at' => now()->subMinutes(5)]);
+        $post2 = Post::factory()->create(['author_id' => $user->id, 'like_count' => 5, 'comment_count' => 2, 'created_at' => now()->subMinutes(5)]);
         // Post 3: 2 likes, 0 comments (score = 4)
-        $post3 = \App\Models\Post::factory()->create(['author_id' => $user->id, 'like_count' => 2, 'comment_count' => 0, 'created_at' => now()->subMinutes(2)]);
+        $post3 = Post::factory()->create(['author_id' => $user->id, 'like_count' => 2, 'comment_count' => 0, 'created_at' => now()->subMinutes(2)]);
 
         $response = $this->getJson('/api/v1/posts?sort=engagement')
             ->assertOk();

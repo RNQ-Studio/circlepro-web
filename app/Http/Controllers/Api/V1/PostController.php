@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StorePostRequest;
 use App\Http\Resources\Api\V1\PostResource;
+use App\Models\Poll;
+use App\Models\PollVote;
 use App\Models\Post;
 use App\Models\PostLike;
 use App\Models\ScoringSession;
@@ -13,6 +15,7 @@ use App\Support\Enums\PostVisibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -53,11 +56,11 @@ class PostController extends Controller
 
         if ($request->query('sort') === 'engagement') {
             $base->orderByDesc('is_pinned')
-                 ->orderByRaw('(like_count * 2 + comment_count * 5) desc')
-                 ->orderByDesc('created_at');
+                ->orderByRaw('(like_count * 2 + comment_count * 5) desc')
+                ->orderByDesc('created_at');
         } else {
             $queryBuilder->defaultSort('-created_at')
-                         ->allowedSorts('created_at');
+                ->allowedSorts('created_at');
         }
 
         $posts = $queryBuilder->paginate(min(max((int) $request->integer('per_page', 20), 1), 100))
@@ -88,7 +91,7 @@ class PostController extends Controller
             'shared_id' => $data['shared_id'] ?? null,
         ]);
 
-        if (!empty($data['media'])) {
+        if (! empty($data['media'])) {
             foreach ($data['media'] as $mediaItem) {
                 $post->media()->create([
                     'type' => $mediaItem['type'],
@@ -98,7 +101,7 @@ class PostController extends Controller
             }
         }
 
-        if (!empty($data['poll'])) {
+        if (! empty($data['poll'])) {
             $poll = $post->poll()->create([
                 'question' => $data['poll']['question'],
                 'expires_at' => $data['poll']['expires_at'] ?? null,
@@ -162,10 +165,10 @@ class PostController extends Controller
         return ApiResponse::success(['liked' => false, 'like_count' => $post->refresh()->like_count]);
     }
 
-    public function vote(Request $request, \App\Models\Poll $poll): JsonResponse
+    public function vote(Request $request, Poll $poll): JsonResponse
     {
         $data = $request->validate([
-            'poll_option_id' => ['required', 'ulid', \Illuminate\Validation\Rule::exists('poll_options', 'id')->where('poll_id', $poll->id)],
+            'poll_option_id' => ['required', 'ulid', Rule::exists('poll_options', 'id')->where('poll_id', $poll->id)],
         ]);
 
         if ($poll->isExpired()) {
@@ -174,7 +177,7 @@ class PostController extends Controller
 
         $userId = $request->user()->id;
 
-        \App\Models\PollVote::query()->updateOrCreate(
+        PollVote::query()->updateOrCreate(
             ['poll_id' => $poll->id, 'user_id' => $userId],
             ['poll_option_id' => $data['poll_option_id']]
         );

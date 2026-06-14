@@ -32,9 +32,9 @@ class EventController extends Controller
                 AllowedFilter::exact('format'),
                 AllowedFilter::scope('search'),
             )
-            ->with(['organization', 'creator', 'divisions'])
             ->allowedSorts('title', 'starts_at', 'created_at')
             ->defaultSort('-starts_at')
+            ->with(['organization', 'creator', 'divisions'])
             ->paginate($perPage)
             ->appends($request->query());
 

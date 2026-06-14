@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\User;
+use Database\Seeders\OrganizationSeeder;
 use Database\Seeders\TargetFaceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Passport\Passport;
@@ -15,7 +16,7 @@ class TargetFaceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\OrganizationSeeder::class);
+        $this->seed(OrganizationSeeder::class);
         $this->seed(TargetFaceSeeder::class);
     }
 
@@ -38,7 +39,7 @@ class TargetFaceTest extends TestCase
         for ($i = 0; $i < count($data) - 1; $i++) {
             $this->assertTrue(
                 $data[$i]['used_count'] >= $data[$i + 1]['used_count'],
-                "Index {$i} ({$data[$i]['code']} count: {$data[$i]['used_count']}) has fewer participants than index " . ($i + 1) . " ({$data[$i+1]['code']} count: {$data[$i+1]['used_count']})"
+                "Index {$i} ({$data[$i]['code']} count: {$data[$i]['used_count']}) has fewer participants than index ".($i + 1)." ({$data[$i + 1]['code']} count: {$data[$i + 1]['used_count']})"
             );
         }
     }

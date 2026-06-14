@@ -2,11 +2,15 @@
 
 namespace Tests\Feature\BackOffice;
 
+use App\Filament\Resources\TargetFaces\Pages\EditTargetFace;
 use App\Filament\Resources\TargetFaces\TargetFaceResource;
 use App\Models\TargetFace;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class TargetFaceManagementTest extends TestCase
@@ -68,12 +72,12 @@ class TargetFaceManagementTest extends TestCase
             'used_count' => 0,
         ]);
 
-        \Illuminate\Support\Facades\Storage::fake('gcs'); // since the upload service resolves disk as 'gcs' in tests
+        Storage::fake('gcs'); // since the upload service resolves disk as 'gcs' in tests
 
-        $file = \Illuminate\Http\UploadedFile::fake()->image('new_face.png');
+        $file = UploadedFile::fake()->image('new_face.png');
 
-        \Livewire\Livewire::actingAs($admin)
-            ->test(\App\Filament\Resources\TargetFaces\Pages\EditTargetFace::class, [
+        Livewire::actingAs($admin)
+            ->test(EditTargetFace::class, [
                 'record' => $targetFace->getKey(),
             ])
             ->set('data.image_upload', $file);

@@ -64,31 +64,38 @@ class QuoteTest extends TestCase
         $this->assertNotEquals($ids1, $ids3);
     }
 
-    public function test_guest_can_create_show_update_and_delete_quote(): void
+    public function test_guest_can_show_a_single_quote(): void
     {
-        $quoteId = $this->postJson('/api/v1/quotes', [
+        $quote = Quote::factory()->create([
             'text' => 'Talk is cheap. Show me the code.',
             'author' => 'Linus Torvalds',
-            'source' => 'LKML',
-        ])
-            ->assertCreated()
-            ->assertJsonPath('data.author', 'Linus Torvalds')
-            ->json('data.id');
+        ]);
 
-        $this->getJson("/api/v1/quotes/{$quoteId}")
+        $this->getJson("/api/v1/quotes/{$quote->id}")
             ->assertOk()
-            ->assertJsonPath('data.text', 'Talk is cheap. Show me the code.');
-
-        $this->putJson("/api/v1/quotes/{$quoteId}", ['is_active' => false])
-            ->assertOk()
-            ->assertJsonPath('data.is_active', false)
+            ->assertJsonPath('data.text', 'Talk is cheap. Show me the code.')
             ->assertJsonPath('data.author', 'Linus Torvalds');
+    }
 
-        $this->deleteJson("/api/v1/quotes/{$quoteId}")
-            ->assertOk()
-            ->assertJson(['message' => 'Quote deleted']);
+    /**
+     * The mobile quote API is intentionally read-only (commit 335f54a):
+     * quotes are authored via the Filament admin panel, not the public API.
+     * This guards against accidentally re-exposing write endpoints.
+     */
+    public function test_quote_write_endpoints_are_not_exposed(): void
+    {
+        $quote = Quote::factory()->create();
 
-        $this->assertSoftDeleted('quotes', ['id' => $quoteId]);
+        $this->postJson('/api/v1/quotes', [
+            'text' => 'Should not be creatable via API.',
+            'author' => 'Nobody',
+        ])->assertStatus(405);
+
+        $this->putJson("/api/v1/quotes/{$quote->id}", ['is_active' => false])
+            ->assertStatus(405);
+
+        $this->deleteJson("/api/v1/quotes/{$quote->id}")
+            ->assertStatus(405);
     }
 
     public function test_authenticated_user_can_love_and_unlove_quote(): void

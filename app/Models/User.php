@@ -125,13 +125,13 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail, OAu
             ->withTimestamps();
     }
 
-    /** @return BelongsToMany<User, $this> */
+    /** @return BelongsToMany<User, $this, Follow> */
     public function followings(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'follows', 'follower_id', 'followee_id')->using(Follow::class)->withPivot('created_at');
     }
 
-    /** @return BelongsToMany<User, $this> */
+    /** @return BelongsToMany<User, $this, Follow> */
     public function followers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'follows', 'followee_id', 'follower_id')->using(Follow::class)->withPivot('created_at');

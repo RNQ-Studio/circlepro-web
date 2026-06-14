@@ -4,8 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Asset;
 use App\Models\TargetFace;
-use App\Support\Enums\AssetStatus;
 use App\Services\AssetUploadService;
+use App\Support\Enums\AssetStatus;
 use Illuminate\Console\Command;
 use Illuminate\Http\UploadedFile;
 
@@ -34,6 +34,7 @@ class UploadMasterTargets extends Command
 
             if (! file_exists($fullPath)) {
                 $this->error("File not found at: {$fullPath}");
+
                 continue;
             }
 
@@ -64,6 +65,7 @@ class UploadMasterTargets extends Command
                     $this->info("Successfully uploaded {$filename} to GCS.");
                 } catch (\Throwable $e) {
                     $this->error("Failed to upload {$filename}: {$e->getMessage()}");
+
                     continue;
                 }
             } else {
@@ -85,6 +87,7 @@ class UploadMasterTargets extends Command
         }
 
         $this->info('Done!');
+
         return self::SUCCESS;
     }
 }

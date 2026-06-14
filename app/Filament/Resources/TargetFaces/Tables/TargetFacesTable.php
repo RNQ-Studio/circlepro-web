@@ -6,6 +6,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -15,7 +16,7 @@ class TargetFacesTable
     {
         return $table
             ->columns([
-                \Filament\Tables\Columns\ImageColumn::make('image_path')
+                ImageColumn::make('image_path')
                     ->label('Gambar')
                     ->circular()
                     ->state(fn ($record) => $record->image_path ? (str_starts_with($record->image_path, 'http') ? $record->image_path : asset($record->image_path)) : null)

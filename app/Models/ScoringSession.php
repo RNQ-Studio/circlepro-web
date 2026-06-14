@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Enums\ArcheryEnvironment;
 use App\Support\Enums\BowClass;
 use App\Support\Enums\DistanceCategory;
+use App\Support\Enums\ParticipationStatus;
 use App\Support\Enums\ScoringSessionStatus;
 use App\Support\Enums\SyncSource;
 use Database\Factories\ScoringSessionFactory;
@@ -20,17 +21,23 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property string $id
- * @property int $user_id
+ * @property int|null $user_id NULL = guest participant (group practice)
+ * @property string|null $guest_name display name for a player without an account
+ * @property int|null $added_by_user_id who created this participant row (host)
  * @property string|null $equipment_profile_id
  * @property string|null $organization_id
  * @property string|null $event_division_id
  * @property string|null $scoring_session_group_id
+ * @property ParticipationStatus|null $participation_status
  * @property string|null $title
  * @property BowClass|null $bow_class
  * @property DistanceCategory|null $distance_category
  * @property int $distance_m
  * @property ArcheryEnvironment|null $environment
  * @property int|null $target_face_cm
+ * @property string|null $target_face_id
+ * @property int|null $target_butt bantalan number (Phase 3)
+ * @property string|null $target_letter target position A/B/C/D (Phase 3)
  * @property int $num_ends
  * @property int $arrows_per_end
  * @property ScoringSessionStatus|null $status
@@ -52,6 +59,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
  * @property-read Collection<int, ScoringEnd> $ends
+ * @property-read ScoringSessionGroup|null $group
+ * @property-read User|null $addedBy
+ * @property-read Collection<int, ScoringSessionClaim> $claims
  */
 class ScoringSession extends Model
 {
@@ -61,10 +71,13 @@ class ScoringSession extends Model
     protected $fillable = [
         'id',
         'user_id',
+        'guest_name',
+        'added_by_user_id',
         'equipment_profile_id',
         'organization_id',
         'event_division_id',
         'scoring_session_group_id',
+        'participation_status',
         'title',
         'bow_class',
         'distance_category',
@@ -72,6 +85,8 @@ class ScoringSession extends Model
         'environment',
         'target_face_cm',
         'target_face_id',
+        'target_butt',
+        'target_letter',
         'num_ends',
         'arrows_per_end',
         'status',
@@ -90,6 +105,7 @@ class ScoringSession extends Model
             'distance_category' => DistanceCategory::class,
             'environment' => ArcheryEnvironment::class,
             'status' => ScoringSessionStatus::class,
+            'participation_status' => ParticipationStatus::class,
             'source' => SyncSource::class,
             'is_personal_best' => 'boolean',
             'avg_per_arrow' => 'float',
@@ -121,6 +137,30 @@ class ScoringSession extends Model
     public function ends(): HasMany
     {
         return $this->hasMany(ScoringEnd::class)->orderBy('end_number');
+    }
+
+    /** @return BelongsTo<ScoringSessionGroup, $this> */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(ScoringSessionGroup::class, 'scoring_session_group_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function addedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'added_by_user_id');
+    }
+
+    /** @return HasMany<ScoringSessionClaim, $this> */
+    public function claims(): HasMany
+    {
+        return $this->hasMany(ScoringSessionClaim::class);
+    }
+
+    /** A participant row with no owner yet (group practice guest). */
+    public function isGuest(): bool
+    {
+        return $this->user_id === null;
     }
 
     /** @param Builder<ScoringSession> $query */

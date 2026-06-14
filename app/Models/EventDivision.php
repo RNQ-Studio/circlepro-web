@@ -6,6 +6,7 @@ use App\Support\Enums\AgeGroup;
 use App\Support\Enums\BowClass;
 use App\Support\Enums\DistanceCategory;
 use App\Support\Enums\Gender;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,6 +33,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $rated_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read string $display_name
  * @property-read Event $event
  * @property-read Collection<int, EventRegistration> $registrations
  */
@@ -74,6 +76,24 @@ class EventDivision extends Model
             'sof_avg_rating' => 'float',
             'rated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Human-readable division label, e.g. "Recurve Putra Senior 70m".
+     *
+     * @return Attribute<string, never>
+     */
+    protected function displayName(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): string => sprintf(
+                '%s %s %s %s',
+                ucfirst($this->bow_class->value),
+                ucfirst($this->gender->value),
+                $this->age_group->value,
+                $this->distance_category->value,
+            ),
+        );
     }
 
     /** @return BelongsTo<Event, $this> */

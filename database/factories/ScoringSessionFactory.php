@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Support\Enums\ArcheryEnvironment;
 use App\Support\Enums\BowClass;
 use App\Support\Enums\DistanceCategory;
+use App\Support\Enums\ParticipationStatus;
 use App\Support\Enums\ScoringSessionStatus;
 use App\Support\Enums\SyncSource;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -45,6 +46,20 @@ class ScoringSessionFactory extends Factory
         return $this->state(fn (): array => [
             'status' => ScoringSessionStatus::Completed,
             'completed_at' => now(),
+        ]);
+    }
+
+    /**
+     * A guest participant row in a group: no owner yet, just a display name.
+     * Excluded from stats/PB because every stats query filters on user_id.
+     */
+    public function guest(): static
+    {
+        return $this->state(fn (): array => [
+            'user_id' => null,
+            'guest_name' => fake()->firstName(),
+            'added_by_user_id' => User::factory(),
+            'participation_status' => ParticipationStatus::HostAdded,
         ]);
     }
 }

@@ -387,19 +387,19 @@ class RatingEngine
 
                 if ($newSigma > 0.08) {
                     $isSuspicious = true;
-                    $suspiciousReasons[] = "High volatility detected (sigma > 0.08)";
+                    $suspiciousReasons[] = 'High volatility detected (sigma > 0.08)';
                 }
                 if (($newSigma - $sigmaBefore) > 0.02) {
                     $isSuspicious = true;
-                    $suspiciousReasons[] = "Volatility jump detected (delta sigma > 0.02)";
+                    $suspiciousReasons[] = 'Volatility jump detected (delta sigma > 0.02)';
                 }
                 if ($eventsCount >= 3 && ($p['nps'] - $displayBefore) > 250.0) {
                     $isSuspicious = true;
-                    $suspiciousReasons[] = "Score performance is an outlier (NPS vs Display Rating diff > 250)";
+                    $suspiciousReasons[] = 'Score performance is an outlier (NPS vs Display Rating diff > 250)';
                 }
                 if ($eventsCount >= 3 && ($finalMu - $muBefore) > 100.0) {
                     $isSuspicious = true;
-                    $suspiciousReasons[] = "Abrupt rating improvement (mu diff > 100)";
+                    $suspiciousReasons[] = 'Abrupt rating improvement (mu diff > 100)';
                 }
 
                 $suspiciousReasonStr = $isSuspicious ? implode(', ', $suspiciousReasons) : null;

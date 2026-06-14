@@ -2,11 +2,28 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property string $id
+ * @property string $code
+ * @property string $name
+ * @property string $audience
+ * @property int $price
+ * @property string $interval
+ * @property array<string, mixed>|null $features
+ * @property array<string, mixed>|null $limits
+ * @property bool $is_active
+ * @property int $sort_order
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Collection<int, Subscription> $subscriptions
+ */
 class SubscriptionPlan extends Model
 {
     use HasFactory, HasUlids;

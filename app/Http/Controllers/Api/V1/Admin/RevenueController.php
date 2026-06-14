@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Subscription;
 use App\Models\Payment;
-use App\Support\Enums\PaymentStatus;
+use App\Models\Subscription;
 use App\Support\ApiResponse;
+use App\Support\Enums\PaymentStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -64,7 +64,7 @@ class RevenueController extends Controller
             'revenue' => [
                 'total_paid_amount' => (int) $totalPaidAmount,
                 'total_transactions_count' => $totalTransactionsCount,
-            ]
+            ],
         ]);
     }
 }

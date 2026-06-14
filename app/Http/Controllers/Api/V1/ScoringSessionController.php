@@ -8,6 +8,8 @@ use App\Http\Requests\Api\V1\SyncScoringSessionsRequest;
 use App\Http\Requests\Api\V1\UpdateScoringSessionRequest;
 use App\Http\Resources\Api\V1\ScoringSessionResource;
 use App\Models\ScoringSession;
+use App\Models\Subscription;
+use App\Models\User;
 use App\Services\Scoring\ScoringService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -57,14 +59,14 @@ class ScoringSessionController extends Controller
         // Resolve session to see if it is new
         $query = ScoringSession::where('user_id', $user->id);
         $exists = false;
-        if (!empty($data['client_uuid'])) {
+        if (! empty($data['client_uuid'])) {
             $exists = (clone $query)->where('client_uuid', $data['client_uuid'])->exists();
         }
-        if (!$exists && !empty($data['id'])) {
+        if (! $exists && ! empty($data['id'])) {
             $exists = (clone $query)->whereKey($data['id'])->exists();
         }
 
-        if (!$exists) {
+        if (! $exists) {
             $this->checkScoringLimit($user, 1);
         }
 
@@ -131,9 +133,9 @@ class ScoringSessionController extends Controller
         );
     }
 
-    private function checkScoringLimit(\App\Models\User $user, int $additionalCount = 1): void
+    private function checkScoringLimit(User $user, int $additionalCount = 1): void
     {
-        $sub = \App\Models\Subscription::where('user_id', $user->id)
+        $sub = Subscription::where('user_id', $user->id)
             ->where('subscriber_type', 'user')
             ->whereIn('status', ['active', 'trialing'])
             ->first();
@@ -143,7 +145,7 @@ class ScoringSessionController extends Controller
         }
 
         $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        
+
         $existingCount = ScoringSession::where('user_id', $user->id)
             ->where('started_at', '>=', $startOfWeek)
             ->count();
@@ -153,9 +155,9 @@ class ScoringSessionController extends Controller
         }
     }
 
-    private function checkScoringLimitForSync(\App\Models\User $user, array $sessions): void
+    private function checkScoringLimitForSync(User $user, array $sessions): void
     {
-        $sub = \App\Models\Subscription::where('user_id', $user->id)
+        $sub = Subscription::where('user_id', $user->id)
             ->where('subscriber_type', 'user')
             ->whereIn('status', ['active', 'trialing'])
             ->first();
@@ -169,15 +171,15 @@ class ScoringSessionController extends Controller
             $query = ScoringSession::where('user_id', $user->id);
             $exists = false;
 
-            if (!empty($sessionData['client_uuid'])) {
+            if (! empty($sessionData['client_uuid'])) {
                 $exists = (clone $query)->where('client_uuid', $sessionData['client_uuid'])->exists();
             }
 
-            if (!$exists && !empty($sessionData['id'])) {
+            if (! $exists && ! empty($sessionData['id'])) {
                 $exists = (clone $query)->whereKey($sessionData['id'])->exists();
             }
 
-            if (!$exists) {
+            if (! $exists) {
                 $newCount++;
             }
         }

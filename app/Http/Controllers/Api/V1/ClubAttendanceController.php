@@ -42,7 +42,7 @@ class ClubAttendanceController extends Controller
                 'id' => $attendance?->id,
                 'user' => [
                     'id' => $member->user?->id,
-                    'full_name' => $member->user?->full_name ?? $member->user?->name,
+                    'full_name' => $member->user->full_name ?? $member->user->name,
                     'username' => $member->user?->username,
                     'avatar_url' => $member->user?->profile?->avatar_url,
                 ],

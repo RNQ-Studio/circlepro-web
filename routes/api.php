@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\UserExcelController;
+use App\Http\Controllers\Api\V1\AdController;
+use App\Http\Controllers\Api\V1\Admin\RevenueController;
 use App\Http\Controllers\Api\V1\AppController;
 use App\Http\Controllers\Api\V1\ArcheryRangeController;
 use App\Http\Controllers\Api\V1\ArticleController;
@@ -21,6 +23,7 @@ use App\Http\Controllers\Api\V1\EventScoringController;
 use App\Http\Controllers\Api\V1\FollowController;
 use App\Http\Controllers\Api\V1\GamificationController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\MonetizationController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OtpController;
@@ -30,13 +33,11 @@ use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\QuoteController;
 use App\Http\Controllers\Api\V1\RatingController;
 use App\Http\Controllers\Api\V1\ScoringSessionController;
+use App\Http\Controllers\Api\V1\ScoringSessionGroupController;
 use App\Http\Controllers\Api\V1\SocialAuthController;
 use App\Http\Controllers\Api\V1\StoryController;
 use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\TargetFaceController;
-use App\Http\Controllers\Api\V1\MonetizationController;
-use App\Http\Controllers\Api\V1\AdController;
-use App\Http\Controllers\Api\V1\Admin\RevenueController;
 use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Route;
 
@@ -146,6 +147,29 @@ Route::prefix('v1')->group(function (): void {
             Route::get('sessions/{scoringSession}/summary', [ScoringSessionController::class, 'summary']);
             Route::apiResource('sessions', ScoringSessionController::class)
                 ->parameters(['sessions' => 'scoringSession']);
+
+            /*
+            |------------------------------------------------------------------
+            | Latihan Bersama (group scoring) — Phase 0 (Sprint 02 lifecycle,
+            | Sprint 03 score input + offline sync + fair leaderboard)
+            |------------------------------------------------------------------
+            */
+            Route::prefix('groups')->group(function (): void {
+                Route::get('lookup', [ScoringSessionGroupController::class, 'lookup']);
+                Route::get('/', [ScoringSessionGroupController::class, 'index']);
+                Route::post('/', [ScoringSessionGroupController::class, 'store'])
+                    ->middleware('throttle:30,1');
+                Route::get('{group}', [ScoringSessionGroupController::class, 'show']);
+                Route::patch('{group}', [ScoringSessionGroupController::class, 'update']);
+                Route::post('{group}/participants', [ScoringSessionGroupController::class, 'addParticipants']);
+                Route::delete('{group}/participants/{session}', [ScoringSessionGroupController::class, 'removeParticipant']);
+
+                // Sprint 03 — offline-first scoring & fair leaderboard.
+                Route::put('{group}/participants/{session}/score', [ScoringSessionGroupController::class, 'scoreParticipant']);
+                Route::post('{group}/sync', [ScoringSessionGroupController::class, 'sync'])
+                    ->middleware('throttle:60,1');
+                Route::get('{group}/leaderboard', [ScoringSessionGroupController::class, 'leaderboard']);
+            });
         });
 
         /*
@@ -249,7 +273,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('monetization/subscribe/google', [MonetizationController::class, 'subscribeGooglePlay']);
         Route::post('monetization/subscribe/manual', [MonetizationController::class, 'subscribeManual']);
         Route::post('clubs/{club}/subscription', [MonetizationController::class, 'clubSubscription']);
-        
+
         // Ads routes
         Route::get('ads', [AdController::class, 'index']);
         Route::post('ads/{ad}/click', [AdController::class, 'click']);

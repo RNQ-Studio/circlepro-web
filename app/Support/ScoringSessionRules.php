@@ -50,7 +50,19 @@ class ScoringSessionRules
             "{$prefix}started_at" => [$partial ? 'sometimes' : 'required', 'date'],
             "{$prefix}completed_at" => ['nullable', 'date'],
             "{$prefix}source" => ['nullable', Rule::enum(SyncSource::class)],
+        ] + self::endsRules($prefix);
+    }
 
+    /**
+     * Just the nested ends/arrows rules, reusable on their own by group
+     * participant scoring (which inherits the round format from the group and
+     * so doesn't re-validate the session-level format fields).
+     *
+     * @return array<string, mixed>
+     */
+    public static function endsRules(string $prefix = ''): array
+    {
+        return [
             "{$prefix}ends" => ['nullable', 'array'],
             "{$prefix}ends.*.id" => ['nullable', 'ulid'],
             "{$prefix}ends.*.end_number" => ['required_with:'."{$prefix}ends", 'integer', 'min:1'],

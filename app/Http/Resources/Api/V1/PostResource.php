@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\PollVote;
 use App\Models\Post;
 use App\Models\ScoringSession;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class PostResource extends JsonResource
             'comment_count' => $this->comment_count,
             'is_liked' => (bool) ($this->is_liked ?? false),
             'is_pinned' => $this->is_pinned,
-            'media' => $this->media->map(fn($m) => [
+            'media' => $this->media->map(fn ($m) => [
                 'id' => $m->id,
                 'url' => $m->url,
                 'type' => $m->type->value,
@@ -84,7 +85,7 @@ class PostResource extends JsonResource
         }
 
         $userId = $request->user()?->id;
-        $userVote = $userId ? \App\Models\PollVote::query()->where('poll_id', $poll->id)->where('user_id', $userId)->first() : null;
+        $userVote = $userId ? PollVote::query()->where('poll_id', $poll->id)->where('user_id', $userId)->first() : null;
         $userVotedOptionId = $userVote?->poll_option_id;
 
         $options = $poll->options()->withCount('votes')->get()->map(function ($option) {

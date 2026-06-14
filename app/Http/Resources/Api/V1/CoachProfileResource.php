@@ -27,7 +27,7 @@ class CoachProfileResource extends JsonResource
             'reviews_count' => $this->reviews_count,
             'user' => [
                 'id' => $this->user?->id,
-                'full_name' => $this->user?->full_name ?? $this->user?->name,
+                'full_name' => $this->user->full_name ?? $this->user->name,
                 'username' => $this->user?->username,
                 'avatar_url' => $this->user?->profile?->avatar_url,
                 'city' => $this->user?->profile?->city,

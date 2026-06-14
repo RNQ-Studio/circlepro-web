@@ -80,7 +80,7 @@ class MonetizationController extends Controller
                 'scoring_sessions_this_week' => $sessionsCount,
                 'scoring_sessions_limit' => $maxSessions,
                 'is_gated' => $maxSessions !== -1 && $sessionsCount >= $maxSessions,
-            ]
+            ],
         ]);
     }
 
@@ -99,7 +99,7 @@ class MonetizationController extends Controller
 
         // 1. Create paid Payment record
         $payment = Payment::create([
-            'payment_number' => 'PAY-GP-' . strtoupper(Str::random(10)),
+            'payment_number' => 'PAY-GP-'.strtoupper(Str::random(10)),
             'user_id' => $user->id,
             'payable_type' => SubscriptionPlan::class,
             'payable_id' => $plan->id,
@@ -142,7 +142,7 @@ class MonetizationController extends Controller
 
         return ApiResponse::success([
             'subscription' => $subscription->load('plan'),
-            'payment' => $payment
+            'payment' => $payment,
         ], 'Subscription successfully validated via Google Play');
     }
 
@@ -160,7 +160,7 @@ class MonetizationController extends Controller
 
         // 1. Create pending Payment
         $payment = Payment::create([
-            'payment_number' => 'PAY-TRF-' . strtoupper(Str::random(10)),
+            'payment_number' => 'PAY-TRF-'.strtoupper(Str::random(10)),
             'user_id' => $user->id,
             'payable_type' => SubscriptionPlan::class,
             'payable_id' => $plan->id,
@@ -202,7 +202,7 @@ class MonetizationController extends Controller
         return ApiResponse::success([
             'subscription' => $subscription->load('plan'),
             'payment' => $payment,
-            'instructions' => 'Silakan transfer ke rekening Bank Mandiri 123-456-7890 a/n CirclePro sebesar Rp' . number_format($plan->price, 0, ',', '.')
+            'instructions' => 'Silakan transfer ke rekening Bank Mandiri 123-456-7890 a/n CirclePro sebesar Rp'.number_format($plan->price, 0, ',', '.'),
         ], 'Manual subscription request created.');
     }
 
@@ -223,7 +223,7 @@ class MonetizationController extends Controller
 
         // 1. Create Payment
         $payment = Payment::create([
-            'payment_number' => 'PAY-CLUB-' . strtoupper(Str::random(10)),
+            'payment_number' => 'PAY-CLUB-'.strtoupper(Str::random(10)),
             'user_id' => $request->user()->id,
             'payable_type' => SubscriptionPlan::class,
             'payable_id' => $plan->id,
@@ -263,7 +263,7 @@ class MonetizationController extends Controller
 
         return ApiResponse::success([
             'subscription' => $subscription->load('plan'),
-            'payment' => $payment
+            'payment' => $payment,
         ], 'Club subscription upgraded successfully');
     }
 }

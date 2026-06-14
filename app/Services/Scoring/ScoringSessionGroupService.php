@@ -102,6 +102,49 @@ class ScoringSessionGroupService
     }
 
     /**
+     * Self-join a group — Sprint 10, task 10.1. A "real" user joins for
+     * themselves (K7): an owned row (user_id set, participation_status = self)
+     * is minted, so consent is automatic — we never write to someone else's
+     * stats. Idempotent (double-tap safe): one owned row per user, so a repeated
+     * join resolves to the existing row instead of duplicating it. A bow class
+     * may be supplied (optional, K8); it is also back-filled onto an existing
+     * row that still lacks one, so a member who joined without picking a class
+     * can set it on a later tap and unlock PB.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function selfJoin(ScoringSessionGroup $group, User $user, array $data): ScoringSession
+    {
+        return DB::transaction(function () use ($group, $user, $data): ScoringSession {
+            // Only a live session accepts joins; a finished/abandoned group is
+            // closed (the leaderboard is already honest & final).
+            abort_unless(
+                $group->status === ScoringSessionStatus::InProgress,
+                422,
+                'Sesi sudah berakhir; tidak bisa bergabung.',
+            );
+
+            $existing = $group->participants()->where('user_id', $user->id)->first();
+            if ($existing !== null) {
+                if (! empty($data['bow_class']) && $existing->bow_class === null) {
+                    $existing->bow_class = $data['bow_class'];
+                    $existing->save();
+                }
+
+                return $existing;
+            }
+
+            return $this->createParticipantRow($group, $user, [
+                'id' => $data['id'] ?? null,
+                'user_id' => $user->id,
+                'participation_status' => ParticipationStatus::Self->value,
+                'bow_class' => $data['bow_class'] ?? null,
+                'client_uuid' => $data['client_uuid'] ?? null,
+            ]);
+        });
+    }
+
+    /**
      * Remove a participant from the group (soft delete). The host may remove
      * anyone; a participant may remove only their own row (enforced by caller).
      */

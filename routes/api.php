@@ -161,6 +161,11 @@ Route::prefix('v1')->group(function (): void {
                     ->middleware('throttle:30,1');
                 Route::get('{group}', [ScoringSessionGroupController::class, 'show']);
                 Route::patch('{group}', [ScoringSessionGroupController::class, 'update']);
+
+                // Sprint 10 — self-join via link/QR/code (Phase 1).
+                Route::post('{group}/join', [ScoringSessionGroupController::class, 'join'])
+                    ->middleware('throttle:30,1');
+
                 Route::post('{group}/participants', [ScoringSessionGroupController::class, 'addParticipants']);
                 Route::delete('{group}/participants/{session}', [ScoringSessionGroupController::class, 'removeParticipant']);
 

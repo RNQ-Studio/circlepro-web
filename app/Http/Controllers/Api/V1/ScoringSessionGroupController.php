@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AddGroupParticipantsRequest;
+use App\Http\Requests\Api\V1\JoinScoringSessionGroupRequest;
 use App\Http\Requests\Api\V1\ScoreGroupParticipantRequest;
 use App\Http\Requests\Api\V1\StoreScoringSessionGroupRequest;
 use App\Http\Requests\Api\V1\SyncGroupParticipantsRequest;
@@ -106,6 +107,24 @@ class ScoringSessionGroupController extends Controller
         return ApiResponse::success(
             new ScoringSessionGroupResource($group->load('host')),
             'Group updated',
+        );
+    }
+
+    /**
+     * Self-join a group via its link/QR/code (task 10.1). Any authenticated user
+     * may join for themselves; an owned row (participation_status = self) is
+     * minted so consent is automatic (K7). Idempotent: a double-tap resolves to
+     * the same row. The joined member can then view, score their own row and
+     * leave on their own.
+     */
+    public function join(JoinScoringSessionGroupRequest $request, ScoringSessionGroup $group): JsonResponse
+    {
+        $participant = $this->groups->selfJoin($group, $request->user(), $request->validated());
+
+        return ApiResponse::success(
+            new GroupParticipantResource($participant->load('user')),
+            'Joined',
+            201,
         );
     }
 

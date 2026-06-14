@@ -371,6 +371,31 @@ class GroupScoringTest extends TestCase
             ->assertJsonCount(2, 'data.entries');
     }
 
+    public function test_leaderboard_meta_reports_group_lifecycle_for_polling(): void
+    {
+        $host = User::factory()->create();
+        [$groupId, $ids] = $this->hostGroupWithGuests($host, ['Budi'], ['num_ends' => 1]);
+        $this->scoreCompleted($groupId, $ids[0], [[9, 9, 9]]);
+
+        // While live the client keeps polling (Sprint 11, task 11.2).
+        $version = $this->getJson("/api/v1/scoring/groups/{$groupId}/leaderboard")
+            ->assertOk()
+            ->assertJsonPath('meta.group_status', ScoringSessionStatus::InProgress->value)
+            ->json('meta.version');
+
+        // Finishing the group bumps updated_at → the cursor moves, so the next
+        // poll fetches a full payload that tells the client to stop polling.
+        Passport::actingAs($host);
+        $this->patchJson("/api/v1/scoring/groups/{$groupId}", [
+            'status' => ScoringSessionStatus::Completed->value,
+        ])->assertOk();
+
+        $this->getJson("/api/v1/scoring/groups/{$groupId}/leaderboard?version={$version}")
+            ->assertOk()
+            ->assertJsonMissingPath('meta.unchanged')
+            ->assertJsonPath('meta.group_status', ScoringSessionStatus::Completed->value);
+    }
+
     public function test_leaderboard_is_private_to_host_and_participants(): void
     {
         $host = User::factory()->create();

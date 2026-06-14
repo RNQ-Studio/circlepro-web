@@ -351,6 +351,10 @@ class ScoringSessionGroupService
             'entries' => $entries,
             'meta' => [
                 'version' => $this->leaderboardVersion($group),
+                // The group lifecycle drives the client's lifecycle-aware poll
+                // (Sprint 11, task 11.2): once it leaves `in_progress` the live
+                // screen stops polling — even when another device finished it.
+                'group_status' => $group->status->value,
                 'all_completed' => $allCompleted,
                 'is_provisional' => ! $allCompleted,
                 'comparable_ends' => $comparableEnds,
@@ -361,11 +365,15 @@ class ScoringSessionGroupService
     }
 
     /**
-     * A cheap monotonic cursor for the leaderboard — `{count}-{maxUpdatedMs}`
-     * over the group + its participants (task 3.6). The count component catches
-     * a participant being removed; max(updated_at) catches any score change or
-     * lifecycle transition. Equal version ⇒ nothing changed ⇒ poll can skip the
-     * heavy payload.
+     * A cheap monotonic cursor for the leaderboard —
+     * `{count}-{maxUpdatedMs}-{status}` over the group + its participants
+     * (task 3.6 / Sprint 11 task 11.3). The count component catches a
+     * participant being removed; max(updated_at) catches any score change; and
+     * the trailing group status guarantees a lifecycle transition (finish /
+     * abandon) always bumps the cursor — even when the host finishes the group
+     * in the same millisecond as the last arrow, so the lifecycle-aware poll
+     * (11.2) reliably learns it should stop. Equal version ⇒ nothing changed ⇒
+     * the poll skips the heavy payload.
      */
     public function leaderboardVersion(ScoringSessionGroup $group): string
     {
@@ -380,7 +388,7 @@ class ScoringSessionGroupService
         $groupMs = $group->updated_at?->getTimestampMs() ?? 0;
         $count = (int) ($agg->cnt ?? 0);
 
-        return $count.'-'.max($participantsMs, $groupMs);
+        return $count.'-'.max($participantsMs, $groupMs).'-'.$group->status->value;
     }
 
     /**

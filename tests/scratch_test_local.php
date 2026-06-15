@@ -1,19 +1,25 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
-$app = require_once __DIR__ . '/../bootstrap/app.php';
+require __DIR__.'/../vendor/autoload.php';
+$app = require_once __DIR__.'/../bootstrap/app.php';
 
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Foundation\Bootstrap\BootProviders;
+use Illuminate\Foundation\Bootstrap\HandleExceptions;
+use Illuminate\Foundation\Bootstrap\LoadConfiguration;
+use Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables;
+use Illuminate\Foundation\Bootstrap\RegisterProviders;
 use Illuminate\Http\Request;
 
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+$kernel = $app->make(Kernel::class);
 
 // Force application to bootstrap
 $app->bootstrapWith([
-    \Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables::class,
-    \Illuminate\Foundation\Bootstrap\LoadConfiguration::class,
-    \Illuminate\Foundation\Bootstrap\HandleExceptions::class,
-    \Illuminate\Foundation\Bootstrap\RegisterProviders::class,
-    \Illuminate\Foundation\Bootstrap\BootProviders::class,
+    LoadEnvironmentVariables::class,
+    LoadConfiguration::class,
+    HandleExceptions::class,
+    RegisterProviders::class,
+    BootProviders::class,
 ]);
 
 // Set GOOGLE_CLIENT_ID in config so verifier doesn't throw SocialAuthNotConfiguredException
@@ -26,7 +32,7 @@ $request = Request::create('/api/v1/auth/social', 'POST', [
 
 $response = $kernel->handle($request);
 
-echo "Status Code: " . $response->getStatusCode() . "\n";
-echo "Response Body: \n" . $response->getContent() . "\n";
+echo 'Status Code: '.$response->getStatusCode()."\n";
+echo "Response Body: \n".$response->getContent()."\n";
 
 $kernel->terminate($request, $response);

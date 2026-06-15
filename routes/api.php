@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\V1\PostController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\QuoteController;
 use App\Http\Controllers\Api\V1\RatingController;
+use App\Http\Controllers\Api\V1\ScoringSessionClaimController;
 use App\Http\Controllers\Api\V1\ScoringSessionController;
 use App\Http\Controllers\Api\V1\ScoringSessionGroupController;
 use App\Http\Controllers\Api\V1\SocialAuthController;
@@ -174,6 +175,17 @@ Route::prefix('v1')->group(function (): void {
                 Route::post('{group}/sync', [ScoringSessionGroupController::class, 'sync'])
                     ->middleware('throttle:60,1');
                 Route::get('{group}/leaderboard', [ScoringSessionGroupController::class, 'leaderboard']);
+
+                // Sprint 13 — guest-slot claim ("Ini Saya") + host inbox (Phase 2).
+                Route::post('{group}/participants/{session}/claim', [ScoringSessionClaimController::class, 'store'])
+                    ->middleware('throttle:30,1');
+                Route::get('{group}/claims', [ScoringSessionClaimController::class, 'index']);
+            });
+
+            // Sprint 13 — resolve (host) / cancel (claimant) a guest-slot claim.
+            Route::prefix('claims')->group(function (): void {
+                Route::patch('{claim}', [ScoringSessionClaimController::class, 'update']);
+                Route::delete('{claim}', [ScoringSessionClaimController::class, 'destroy']);
             });
         });
 

@@ -169,6 +169,21 @@ class ScoringSession extends Model
         $query->where('user_id', $userId);
     }
 
+    /**
+     * Sessions that consume the Free weekly scoring quota — i.e. personal
+     * (individual) sessions only. Latihan Bersama / social sessions
+     * (scoring_session_group_id set) are deliberately EXCLUDED: per O1/K5
+     * (Sprint 15.1), a social session is never gated and never burns a free
+     * user's personal quota — growth wins over conversion, and a partial round
+     * cut mid-session would poison the data anyway.
+     *
+     * @param  Builder<ScoringSession>  $query
+     */
+    public function scopeCountsTowardQuota(Builder $query): void
+    {
+        $query->whereNull('scoring_session_group_id');
+    }
+
     /** @param Builder<ScoringSession> $query */
     public function scopeStartedAfter(Builder $query, string $date): void
     {

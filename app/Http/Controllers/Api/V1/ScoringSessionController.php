@@ -146,7 +146,9 @@ class ScoringSessionController extends Controller
 
         $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
+        // Social / Latihan Bersama sessions never count toward the quota (O1/K5).
         $existingCount = ScoringSession::where('user_id', $user->id)
+            ->countsTowardQuota()
             ->where('started_at', '>=', $startOfWeek)
             ->count();
 
@@ -189,7 +191,9 @@ class ScoringSessionController extends Controller
         }
 
         $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        // Social / Latihan Bersama sessions never count toward the quota (O1/K5).
         $existingCount = ScoringSession::where('user_id', $user->id)
+            ->countsTowardQuota()
             ->where('started_at', '>=', $startOfWeek)
             ->count();
 

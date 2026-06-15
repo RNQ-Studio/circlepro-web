@@ -321,13 +321,44 @@ class ScoringSessionClaimService
             ? ['Klaim disetujui', "Skor di {$label} kini milikmu — PB & statistikmu sudah diperbarui.", 'group_claim_approved']
             : ['Klaim ditolak', "Klaim atas slot di {$label} belum disetujui.", 'group_claim_rejected'];
 
+        $data = $group !== null
+            ? $this->deepLinkPayload($group, $claim, $type)
+            : ['type' => $type, 'claim_id' => $claim->id];
+
+        // 15.3 — turn approval into a skill onboarding: ride the freshly-owned
+        // session's headline numbers (total, average per arrow, first PB) along
+        // with the notification so the mobile success screen can welcome the new
+        // pendata archer ("PB pertamamu: 487!") without a second round-trip.
+        if ($outcome === ClaimStatus::Approved) {
+            $data = array_merge($data, $this->approvedOnboardingPayload($claim, $group));
+        }
+
         $this->push->send(
             $claimant,
             $title,
             $body,
-            $group !== null ? $this->deepLinkPayload($group, $claim, $type) : ['type' => $type, 'claim_id' => $claim->id],
+            $data,
             $type,
         );
+    }
+
+    /**
+     * 15.3 — Skill-onboarding numbers for the claim-success screen. Read off the
+     * session that was just transferred to (and recomputed for) the claimant.
+     *
+     * @return array<string, mixed>
+     */
+    private function approvedOnboardingPayload(ScoringSessionClaim $claim, ?ScoringSessionGroup $group): array
+    {
+        $session = $claim->session;
+
+        return [
+            'group_title' => $group !== null ? $this->groupLabel($group) : null,
+            'total_score' => $session->total_score,
+            'arrows_shot' => $session->arrows_shot,
+            'avg_per_arrow' => $session->avg_per_arrow,
+            'is_personal_best' => (bool) $session->is_personal_best,
+        ];
     }
 
     /**

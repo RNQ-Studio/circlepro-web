@@ -43,9 +43,12 @@ class MonetizationController extends Controller
             ->with('plan')
             ->first();
 
-        // Count sessions this week
+        // Count sessions this week. Social / Latihan Bersama sessions never count
+        // toward the Free quota (O1/K5, Sprint 15.1) — only personal sessions do,
+        // so this usage figure mirrors exactly what the gate enforces.
         $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
         $sessionsCount = ScoringSession::where('user_id', $user->id)
+            ->countsTowardQuota()
             ->where('started_at', '>=', $startOfWeek)
             ->count();
 

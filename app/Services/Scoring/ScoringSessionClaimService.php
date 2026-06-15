@@ -87,6 +87,61 @@ class ScoringSessionClaimService
     }
 
     /**
+     * 14.1 — The guest slots of a group, for a code-holder to find and claim
+     * theirs ("Ini Saya"). Completes the claim loop on the mobile side: the
+     * roster/leaderboard is gated to host+participants (§4 matrix), and lookup
+     * hides the roster, so a fresh guest who taps the shared result card had no
+     * way to discover their slot without first minting a junk self-row. This
+     * read is open to any authenticated code-holder (the group id is an
+     * unguessable ULID resolved via lookup-by-code, and a guest's name + score
+     * already ride on the publicly shared card) and returns only guest rows,
+     * each annotated with THIS user's own claim status so the app can paint the
+     * "Menunggu persetujuan host" badge without a second call.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function claimableSlots(ScoringSessionGroup $group, User $user): array
+    {
+        /** @var Collection<int, ScoringSession> $slots */
+        $slots = $group->participants()
+            ->whereNull('user_id')
+            ->orderByDesc('total_score')
+            ->orderBy('started_at')
+            ->get();
+
+        // The caller's own claims over this group, keyed by slot, so each row
+        // knows whether *I* already claimed it (pending) — one query, no N+1.
+        $myClaims = ScoringSessionClaim::query()
+            ->where('scoring_session_group_id', $group->id)
+            ->where('claimant_user_id', $user->id)
+            ->get()
+            ->keyBy('scoring_session_id');
+
+        return $slots->map(function (ScoringSession $slot) use ($myClaims): array {
+            /** @var ScoringSessionClaim|null $mine */
+            $mine = $myClaims->get($slot->id);
+
+            return [
+                'session_id' => $slot->id,
+                'display_name' => $slot->guest_name,
+                'started_at' => $slot->started_at->toIso8601String(),
+                'distance_category' => $slot->distance_category?->value,
+                'distance_m' => $slot->distance_m,
+                'target_face_cm' => $slot->target_face_cm,
+                'status' => $slot->status?->value,
+                'total_score' => $slot->total_score,
+                'arrows_shot' => $slot->arrows_shot,
+                'x_count' => $slot->x_count,
+                'ten_count' => $slot->ten_count,
+                // Annotate with my own claim so the app paints the badge / hides
+                // the "Ini Saya" CTA for a slot I have already claimed.
+                'my_claim_status' => $mine?->status->value,
+                'my_claim_id' => $mine?->id,
+            ];
+        })->all();
+    }
+
+    /**
      * 13.2 — Host inbox: claims to review for a group, newest first, optionally
      * filtered by status. The slot + claimant are eager-loaded so the host can
      * decide from memory (the slot's score, when it was shot, the name) rather

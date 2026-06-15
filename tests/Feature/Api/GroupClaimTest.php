@@ -149,6 +149,71 @@ class GroupClaimTest extends TestCase
             ->assertUnauthorized();
     }
 
+    // --- 14.1 claimable guest slots (code-holder discovery) -----------------
+
+    public function test_a_code_holder_can_list_claimable_guest_slots(): void
+    {
+        $host = User::factory()->create();
+        [$groupId, $sessionId] = $this->hostGroupWithGuest($host);
+        $this->scoreSlotCompleted($groupId, $sessionId);
+
+        // A fresh archer who only holds the code (never joined) can see the
+        // guest slots, with their score, so they can find and claim theirs.
+        $budi = User::factory()->create();
+        Passport::actingAs($budi);
+        $this->getJson("/api/v1/scoring/groups/{$groupId}/claimable-slots")
+            ->assertOk()
+            ->assertJsonPath('data.slots.0.session_id', $sessionId)
+            ->assertJsonPath('data.slots.0.display_name', 'Pak Budi')
+            ->assertJsonPath('data.slots.0.total_score', 27)
+            // Nothing claimed yet, so no badge.
+            ->assertJsonPath('data.slots.0.my_claim_status', null);
+    }
+
+    public function test_claimable_slots_reflects_my_own_pending_claim(): void
+    {
+        $host = User::factory()->create();
+        [$groupId, $sessionId] = $this->hostGroupWithGuest($host);
+
+        $budi = User::factory()->create();
+        Passport::actingAs($budi);
+        $claimId = $this->postJson("/api/v1/scoring/groups/{$groupId}/participants/{$sessionId}/claim")
+            ->assertCreated()->json('data.id');
+
+        // The slot now carries MY claim status — the app paints "Menunggu
+        // persetujuan host" without a second call.
+        $this->getJson("/api/v1/scoring/groups/{$groupId}/claimable-slots")
+            ->assertOk()
+            ->assertJsonPath('data.slots.0.my_claim_status', ClaimStatus::Pending->value)
+            ->assertJsonPath('data.slots.0.my_claim_id', $claimId);
+    }
+
+    public function test_claimable_slots_excludes_owned_rows(): void
+    {
+        $host = User::factory()->create();
+        [$groupId, $sessionId] = $this->hostGroupWithGuest($host);
+
+        // An owned (self) row joins; it is not a guest, so it never appears.
+        $andi = User::factory()->create();
+        Passport::actingAs($andi);
+        $this->postJson("/api/v1/scoring/groups/{$groupId}/join")->assertCreated();
+
+        $budi = User::factory()->create();
+        Passport::actingAs($budi);
+        $this->getJson("/api/v1/scoring/groups/{$groupId}/claimable-slots")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.slots')
+            ->assertJsonPath('data.slots.0.session_id', $sessionId);
+    }
+
+    public function test_claimable_slots_requires_authentication(): void
+    {
+        $group = ScoringSessionGroup::factory()->create();
+
+        $this->getJson("/api/v1/scoring/groups/{$group->id}/claimable-slots")
+            ->assertUnauthorized();
+    }
+
     // --- 13.2 host inbox ----------------------------------------------------
 
     public function test_host_sees_a_context_rich_inbox(): void

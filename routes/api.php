@@ -180,6 +180,8 @@ Route::prefix('v1')->group(function (): void {
                 Route::post('{group}/participants/{session}/claim', [ScoringSessionClaimController::class, 'store'])
                     ->middleware('throttle:30,1');
                 Route::get('{group}/claims', [ScoringSessionClaimController::class, 'index']);
+                // Sprint 14 — claimable guest slots for a code-holder ("Ini Saya").
+                Route::get('{group}/claimable-slots', [ScoringSessionClaimController::class, 'slots']);
             });
 
             // Sprint 13 — resolve (host) / cancel (claimant) a guest-slot claim.

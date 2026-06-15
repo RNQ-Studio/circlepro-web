@@ -52,6 +52,20 @@ class ScoringSessionClaimController extends Controller
     }
 
     /**
+     * Claimable guest slots of a group (task 14.1). Open to any authenticated
+     * code-holder so a fresh guest who tapped the shared result card can find
+     * and claim their slot without first minting a junk self-row. Each slot is
+     * annotated with the caller's own claim status for the "Menunggu persetujuan
+     * host" badge.
+     */
+    public function slots(Request $request, ScoringSessionGroup $group): JsonResponse
+    {
+        $slots = $this->claims->claimableSlots($group, $request->user());
+
+        return ApiResponse::success(['slots' => $slots]);
+    }
+
+    /**
      * Host inbox — claims to review for a group (task 13.2). Host-only. Optional
      * `?status=` filter (defaults to all); rich slot context per claim.
      */

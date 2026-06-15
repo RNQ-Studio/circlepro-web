@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AddGroupParticipantsRequest;
+use App\Http\Requests\Api\V1\AssignParticipantButtRequest;
+use App\Http\Requests\Api\V1\AutoDistributeButtsRequest;
 use App\Http\Requests\Api\V1\JoinScoringSessionGroupRequest;
 use App\Http\Requests\Api\V1\ScoreGroupParticipantRequest;
 use App\Http\Requests\Api\V1\StoreScoringSessionGroupRequest;
@@ -161,6 +163,66 @@ class ScoringSessionGroupController extends Controller
         $this->groups->removeParticipant($session);
 
         return ApiResponse::success(null, 'Participant removed');
+    }
+
+    /**
+     * Move a participant between bantalan (task 16.2). Host moves anyone, an
+     * archer moves their own row (authorized in the FormRequest). Passing
+     * target_butt = null un-maps the participant. Score is never touched.
+     */
+    public function assignParticipantButt(
+        AssignParticipantButtRequest $request,
+        ScoringSessionGroup $group,
+        ScoringSession $session,
+    ): JsonResponse {
+        $participant = $this->groups->assignParticipantButt($session, $request->validated());
+
+        return ApiResponse::success(
+            new GroupParticipantResource($participant->load('user')),
+            'Bantalan diperbarui',
+        );
+    }
+
+    /**
+     * Round-robin auto-distribute the whole roster across N bantalan in one call
+     * (task 16.3) — the throughput linchpin so mapping 23 archers doesn't eat the
+     * first whistle. Host-only (FormRequest). Returns the freshly mapped roster.
+     */
+    public function autoDistribute(AutoDistributeButtsRequest $request, ScoringSessionGroup $group): JsonResponse
+    {
+        $validated = $request->validated();
+
+        $participants = $this->groups->autoDistributeButts(
+            $group,
+            (int) $validated['butt_count'],
+            (int) ($validated['capacity'] ?? 4),
+        );
+
+        return ApiResponse::success(
+            GroupParticipantResource::collection($participants),
+            'Peserta dibagi ke bantalan',
+        );
+    }
+
+    /**
+     * Roster grouped per-bantalan (task 16.4) — the fondasi for the per-bantalan
+     * UI (Sprint 18) and throughput monitor (Sprint 19). Host or participant
+     * only. Each bucket carries its participants + a small per-butt aggregate;
+     * a trailing bucket (target_butt = null) holds everyone still unmapped.
+     */
+    public function butts(Request $request, ScoringSessionGroup $group): JsonResponse
+    {
+        abort_unless($request->user()->can('view', $group), 404, 'Resource not found.');
+
+        $roster = $this->groups->rosterByButt($group);
+
+        $butts = array_map(static function (array $bucket): array {
+            $bucket['participants'] = GroupParticipantResource::collection($bucket['participants']);
+
+            return $bucket;
+        }, $roster['butts']);
+
+        return ApiResponse::success(['butts' => $butts], 'OK', 200, $roster['meta']);
     }
 
     /**

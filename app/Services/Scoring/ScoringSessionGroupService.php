@@ -109,7 +109,10 @@ class ScoringSessionGroupService
      * join resolves to the existing row instead of duplicating it. A bow class
      * may be supplied (optional, K8); it is also back-filled onto an existing
      * row that still lacks one, so a member who joined without picking a class
-     * can set it on a later tap and unlock PB.
+     * can set it on a later tap and unlock PB. The same back-fill applies to the
+     * bantalan (target_butt/target_letter, Sprint 16 / task 16.1): a self-joiner
+     * may map themselves at join time, and an unmapped row is filled on a later
+     * tap — without ever overwriting a butt the host already assigned.
      *
      * @param  array<string, mixed>  $data
      */
@@ -128,6 +131,12 @@ class ScoringSessionGroupService
             if ($existing !== null) {
                 if (! empty($data['bow_class']) && $existing->bow_class === null) {
                     $existing->bow_class = $data['bow_class'];
+                }
+                if (isset($data['target_butt']) && $existing->target_butt === null) {
+                    $existing->target_butt = $data['target_butt'];
+                    $existing->target_letter = $this->normalizeLetter($data['target_letter'] ?? null);
+                }
+                if ($existing->isDirty()) {
                     $existing->save();
                 }
 
@@ -139,6 +148,8 @@ class ScoringSessionGroupService
                 'user_id' => $user->id,
                 'participation_status' => ParticipationStatus::Self->value,
                 'bow_class' => $data['bow_class'] ?? null,
+                'target_butt' => $data['target_butt'] ?? null,
+                'target_letter' => $data['target_letter'] ?? null,
                 'client_uuid' => $data['client_uuid'] ?? null,
             ]);
         });
@@ -151,6 +162,118 @@ class ScoringSessionGroupService
     public function removeParticipant(ScoringSession $session): void
     {
         $session->delete();
+    }
+
+    /**
+     * Set (or clear) a participant's bantalan — Sprint 16, task 16.2. The
+     * bantalan (target_butt + optional target_letter) is the unit of parallel
+     * work (§3.2 / Efisiensi E1); moving an archer between butts is pure roster
+     * bookkeeping and never touches their score. Passing target_butt = null
+     * un-maps the participant. Authorization (host or row-owner) is enforced by
+     * the caller. The letter is normalized to uppercase for a stable contract.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function assignParticipantButt(ScoringSession $session, array $data): ScoringSession
+    {
+        $butt = $data['target_butt'] ?? null;
+        $session->target_butt = $butt;
+        // A butt-less participant can't keep a letter (A/B/C/D is a seat ON a
+        // butt); clearing the butt clears the letter too.
+        $session->target_letter = $butt === null
+            ? null
+            : $this->normalizeLetter($data['target_letter'] ?? null);
+        $session->save();
+
+        return $session;
+    }
+
+    /**
+     * Round-robin auto-distribute participants across N bantalan — Sprint 16,
+     * task 16.3. This is the throughput linchpin (Efisiensi E1): assigning 23
+     * archers one-by-one eats the first whistle, so the host calls this once and
+     * the field is mapped. The algorithm walks the roster in a stable order and
+     * deals each archer onto the next butt (1..buttCount, wrapping), so the
+     * counts stay within one of each other even when N isn't divisible by M.
+     * Each "lap" around the butts advances the seat letter (A, B, C, …), so
+     * every archer on a butt gets a distinct, fill-ordered letter.
+     *
+     * Capacity (seats per butt, default 4 = the usual A–D) caps the field: if
+     * the roster needs more seats than buttCount × capacity, we refuse (422)
+     * rather than silently overflow a butt. Host-only (enforced by the caller);
+     * re-running it simply re-deals the whole field.
+     *
+     * @return Collection<int, ScoringSession>
+     */
+    public function autoDistributeButts(ScoringSessionGroup $group, int $buttCount, int $capacity): Collection
+    {
+        return DB::transaction(function () use ($group, $buttCount, $capacity): Collection {
+            /** @var Collection<int, ScoringSession> $participants */
+            $participants = $group->participants()
+                ->with('user:id,name')
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get();
+
+            $total = $participants->count();
+            abort_if($total === 0, 422, 'Belum ada peserta untuk dibagi ke bantalan.');
+            abort_if(
+                $total > $buttCount * $capacity,
+                422,
+                "Terlalu banyak peserta ({$total}) untuk {$buttCount} bantalan × kapasitas {$capacity}.",
+            );
+
+            foreach ($participants->values() as $index => $participant) {
+                $participant->target_butt = ($index % $buttCount) + 1;
+                $participant->target_letter = $this->letterForSeat(intdiv($index, $buttCount));
+                $participant->save();
+            }
+
+            return $participants;
+        });
+    }
+
+    /**
+     * Group the roster by bantalan — Sprint 16, task 16.4. The fondasi for the
+     * per-bantalan UI (Sprint 18) and throughput monitor (Sprint 19): the flat
+     * roster becomes buckets keyed by target_butt, each carrying its
+     * participants and a small per-butt aggregate, plus a trailing bucket
+     * (target_butt = null) for everyone still unmapped. Butts are returned in
+     * ascending order; the unmapped bucket, if any, comes last.
+     *
+     * @return array{butts: array<int, array<string, mixed>>, meta: array<string, int>}
+     */
+    public function rosterByButt(ScoringSessionGroup $group): array
+    {
+        $participants = $group->participants()
+            ->with('user:id,name')
+            ->orderBy('target_letter')
+            ->orderBy('created_at')
+            ->get();
+
+        $mapped = $participants->whereNotNull('target_butt');
+        $unmapped = $participants->whereNull('target_butt')->values();
+
+        $butts = $mapped
+            ->groupBy('target_butt')
+            ->sortKeys()
+            ->map(fn (Collection $rows, int|string $butt): array => $this->buttBucket((int) $butt, $rows))
+            ->values()
+            ->all();
+
+        if ($unmapped->isNotEmpty()) {
+            $butts[] = $this->buttBucket(null, $unmapped);
+        }
+
+        return [
+            'butts' => $butts,
+            'meta' => [
+                'butt_count' => $mapped->pluck('target_butt')->unique()->count(),
+                'mapped_count' => $mapped->count(),
+                'unmapped_count' => $unmapped->count(),
+                'participant_count' => $participants->count(),
+            ],
+        ];
     }
 
     /**
@@ -546,7 +669,7 @@ class ScoringSessionGroupService
             'target_face_cm' => $attributes['target_face_cm'] ?? $group->target_face_cm,
             'target_face_id' => $group->target_face_id,
             'target_butt' => $attributes['target_butt'] ?? null,
-            'target_letter' => $attributes['target_letter'] ?? null,
+            'target_letter' => $this->normalizeLetter($attributes['target_letter'] ?? null),
             'num_ends' => $group->num_ends,
             'arrows_per_end' => $group->arrows_per_end,
             'status' => ScoringSessionStatus::InProgress->value,
@@ -563,5 +686,49 @@ class ScoringSessionGroupService
     private function groupHasScores(ScoringSessionGroup $group): bool
     {
         return $group->participants()->where('arrows_shot', '>', 0)->exists();
+    }
+
+    /**
+     * Build one per-bantalan bucket (task 16.4): the participant models plus a
+     * small aggregate the throughput monitor (Sprint 19) will lean on. The
+     * `target_butt` is null for the trailing "unmapped" bucket.
+     *
+     * @param  Collection<int, ScoringSession>  $rows
+     * @return array<string, mixed>
+     */
+    private function buttBucket(?int $butt, Collection $rows): array
+    {
+        return [
+            'target_butt' => $butt,
+            'participant_count' => $rows->count(),
+            'completed_count' => $rows
+                ->where('status', ScoringSessionStatus::Completed)
+                ->count(),
+            'total_score' => (int) $rows->sum('total_score'),
+            'participants' => $rows->values(),
+        ];
+    }
+
+    /**
+     * The seat letter for the n-th lap of the round-robin: 0 → A, 1 → B, ….
+     * The capacity cap (≤ 26, enforced by the request) keeps the lap within A–Z,
+     * so the single-char (char(1)) contract always holds.
+     */
+    private function letterForSeat(int $lap): string
+    {
+        return chr(ord('A') + min($lap, 25));
+    }
+
+    /**
+     * Normalize a target letter to a single uppercase char for a stable
+     * contract; blank/null stays null (an unmapped seat).
+     */
+    private function normalizeLetter(?string $letter): ?string
+    {
+        if ($letter === null || trim($letter) === '') {
+            return null;
+        }
+
+        return strtoupper(substr(trim($letter), 0, 1));
     }
 }

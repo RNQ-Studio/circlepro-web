@@ -2,9 +2,12 @@
 
 namespace App\Services\Scoring;
 
+use App\Models\GroupScorer;
 use App\Models\ScoringSession;
 use App\Models\ScoringSessionGroup;
 use App\Models\User;
+use App\Support\Enums\DistanceCategory;
+use App\Support\Enums\GroupScorerAssignmentType;
 use App\Support\Enums\ParticipationStatus;
 use App\Support\Enums\ScoringSessionStatus;
 use App\Support\Enums\SyncSource;
@@ -136,6 +139,11 @@ class ScoringSessionGroupService
                     $existing->target_butt = $data['target_butt'];
                     $existing->target_letter = $this->normalizeLetter($data['target_letter'] ?? null);
                 }
+                if ($this->mayUpdateParticipantDistance($existing) && array_key_exists('distance_m', $data)) {
+                    $this->applyParticipantDistance($existing, $data);
+                } elseif (array_key_exists('target_face_cm', $data) && $this->mayUpdateParticipantDistance($existing)) {
+                    $this->applyParticipantDistance($existing, $data);
+                }
                 if ($existing->isDirty()) {
                     $existing->save();
                 }
@@ -148,6 +156,8 @@ class ScoringSessionGroupService
                 'user_id' => $user->id,
                 'participation_status' => ParticipationStatus::Self->value,
                 'bow_class' => $data['bow_class'] ?? null,
+                'distance_m' => $data['distance_m'] ?? null,
+                'target_face_cm' => $data['target_face_cm'] ?? null,
                 'target_butt' => $data['target_butt'] ?? null,
                 'target_letter' => $data['target_letter'] ?? null,
                 'client_uuid' => $data['client_uuid'] ?? null,
@@ -186,6 +196,79 @@ class ScoringSessionGroupService
         $session->save();
 
         return $session;
+    }
+
+    /**
+     * Override a participant's real shooting distance/target face before any
+     * score exists — Sprint 20. The group format is only the default; the row
+     * carries the truth that feeds PB/statistics.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function assignParticipantDistance(ScoringSession $session, array $data): ScoringSession
+    {
+        abort_unless(
+            $this->mayUpdateParticipantDistance($session),
+            422,
+            'Jarak peserta tidak bisa diubah setelah skor masuk.',
+        );
+
+        $this->applyParticipantDistance($session, $data);
+        $session->save();
+
+        return $session;
+    }
+
+    /**
+     * Host assigns a scorer to one bantalan. Re-assigning the same butt is a
+     * deliberate host action, so it replaces the previous scorer.
+     */
+    public function assignScorer(
+        ScoringSessionGroup $group,
+        User $host,
+        int $userId,
+        int $targetButt,
+    ): GroupScorer {
+        return DB::transaction(function () use ($group, $host, $userId, $targetButt): GroupScorer {
+            $scorer = GroupScorer::query()->updateOrCreate(
+                [
+                    'scoring_session_group_id' => $group->id,
+                    'target_butt' => $targetButt,
+                ],
+                [
+                    'user_id' => $userId,
+                    'assigned_by_user_id' => $host->id,
+                    'assignment_type' => GroupScorerAssignmentType::Assigned->value,
+                ],
+            );
+
+            return $scorer->load(['user:id,name', 'assignedBy:id,name']);
+        });
+    }
+
+    /**
+     * A participant claims an unassigned bantalan. Claiming is intentionally
+     * first-come, first-served; claim approval is not involved here, only score
+     * ownership claims remain host-approved.
+     */
+    public function claimScorer(ScoringSessionGroup $group, User $user, int $targetButt): GroupScorer
+    {
+        return DB::transaction(function () use ($group, $user, $targetButt): GroupScorer {
+            abort_if(
+                $group->scorers()->where('target_butt', $targetButt)->exists(),
+                422,
+                'Bantalan ini sudah punya skorer.',
+            );
+
+            $scorer = $group->scorers()->create([
+                'user_id' => $user->id,
+                'assigned_by_user_id' => $user->id,
+                'target_butt' => $targetButt,
+                'assignment_type' => GroupScorerAssignmentType::Claimed->value,
+            ]);
+
+            return $scorer->load(['user:id,name', 'assignedBy:id,name']);
+        });
     }
 
     /**
@@ -241,15 +324,22 @@ class ScoringSessionGroupService
      * (target_butt = null) for everyone still unmapped. Butts are returned in
      * ascending order; the unmapped bucket, if any, comes last.
      *
-     * @return array{butts: array<int, array<string, mixed>>, meta: array<string, int>}
+     * @return array{butts: array<int, array<string, mixed>>, meta: array{version: string, group_status: string, butt_count: int, mapped_count: int, unmapped_count: int, participant_count: int}}
      */
     public function rosterByButt(ScoringSessionGroup $group): array
     {
         $participants = $group->participants()
-            ->with('user:id,name')
+            ->with([
+                'user:id,name',
+                'ends' => fn ($q) => $q->withCount('arrows'),
+            ])
             ->orderBy('target_letter')
             ->orderBy('created_at')
             ->get();
+        $scorers = $group->scorers()
+            ->with('user:id,name')
+            ->get()
+            ->keyBy('target_butt');
 
         $mapped = $participants->whereNotNull('target_butt');
         $unmapped = $participants->whereNull('target_butt')->values();
@@ -257,17 +347,34 @@ class ScoringSessionGroupService
         $butts = $mapped
             ->groupBy('target_butt')
             ->sortKeys()
-            ->map(fn (Collection $rows, int|string $butt): array => $this->buttBucket((int) $butt, $rows))
+            ->map(fn (Collection $rows, int|string $butt): array => $this->buttBucket(
+                (int) $butt,
+                $rows,
+                $scorers->get((int) $butt),
+            ))
             ->values()
             ->all();
 
         if ($unmapped->isNotEmpty()) {
-            $butts[] = $this->buttBucket(null, $unmapped);
+            $butts[] = $this->buttBucket(null, $unmapped, null);
         }
+
+        $maxProgress = collect($butts)
+            ->whereNotNull('target_butt')
+            ->max('end_progress') ?? 0;
+        foreach ($butts as &$bucket) {
+            $bucket['lagging_by_ends'] = $bucket['target_butt'] === null
+                ? 0
+                : max(0, (int) $maxProgress - (int) $bucket['end_progress']);
+            $bucket['is_lagging'] = $bucket['lagging_by_ends'] >= 2;
+        }
+        unset($bucket);
 
         return [
             'butts' => $butts,
             'meta' => [
+                'version' => $this->leaderboardVersion($group),
+                'group_status' => $group->status->value,
                 'butt_count' => $mapped->pluck('target_butt')->unique()->count(),
                 'mapped_count' => $mapped->count(),
                 'unmapped_count' => $unmapped->count(),
@@ -334,7 +441,7 @@ class ScoringSessionGroupService
         User $actor,
         array $payload,
     ): ScoringSession {
-        return DB::transaction(function () use ($session, $payload): ScoringSession {
+        return DB::transaction(function () use ($session, $actor, $payload): ScoringSession {
             // Keep the client's idempotency key on the row once it arrives.
             if (! empty($payload['client_uuid']) && $session->client_uuid === null) {
                 $session->client_uuid = $payload['client_uuid'];
@@ -353,6 +460,7 @@ class ScoringSessionGroupService
             }
 
             $session->synced_at = now();
+            $session->last_scored_by_user_id = $actor->id;
             $session->save();
 
             // Delegate ends/arrows + aggregate recompute to the existing pipeline.
@@ -411,7 +519,8 @@ class ScoringSessionGroupService
                     ]);
                 } else {
                     $canWrite = $isHost
-                        || ($session->user_id !== null && $session->user_id === $actor->id);
+                        || ($session->user_id !== null && $session->user_id === $actor->id)
+                        || $this->actorIsScorerForSession($group, $actor, $session);
                     abort_unless($canWrite, 403, 'Tidak diizinkan menulis skor peserta ini.');
                 }
 
@@ -440,7 +549,144 @@ class ScoringSessionGroupService
             ->get();
 
         $rows = $participants->map(fn (ScoringSession $p): array => $this->buildLeaderboardRow($p))->all();
+        $distanceGroups = collect($rows)
+            ->groupBy('distance_key')
+            ->sortBy(fn (Collection $groupRows): array => [
+                (int) ($groupRows->first()['distance_m'] ?? 0),
+                (int) ($groupRows->first()['target_face_cm'] ?? 0),
+            ]);
 
+        $entries = [];
+        $distanceMeta = [];
+        $comparableEndsMeta = [];
+        $allCompletedMeta = [];
+
+        foreach ($distanceGroups as $groupRows) {
+            $ranked = $this->rankLeaderboardRows($groupRows->values()->all(), $group);
+            $distanceEntries = $ranked['entries'];
+            $distanceMeta[] = [
+                'distance_key' => $groupRows->first()['distance_key'],
+                'distance_label' => $groupRows->first()['distance_label'],
+                'distance_m' => $groupRows->first()['distance_m'],
+                'target_face_cm' => $groupRows->first()['target_face_cm'],
+                'participant_count' => count($distanceEntries),
+                'all_completed' => $ranked['all_completed'],
+                'comparable_ends' => $ranked['comparable_ends'],
+            ];
+            $comparableEndsMeta[] = $ranked['comparable_ends'];
+            $allCompletedMeta[] = $ranked['all_completed'];
+
+            foreach ($distanceEntries as $entry) {
+                $entry['distance_group_size'] = count($distanceEntries);
+                $entries[] = $entry;
+            }
+        }
+
+        $allCompleted = $allCompletedMeta !== [] && ! in_array(false, $allCompletedMeta, true);
+        $comparableEnds = $comparableEndsMeta === [] ? 0 : min($comparableEndsMeta);
+
+        return [
+            'entries' => $entries,
+            'meta' => [
+                'version' => $this->leaderboardVersion($group),
+                // The group lifecycle drives the client's lifecycle-aware poll
+                // (Sprint 11, task 11.2): once it leaves `in_progress` the live
+                // screen stops polling — even when another device finished it.
+                'group_status' => $group->status->value,
+                'all_completed' => $allCompleted,
+                'is_provisional' => ! $allCompleted,
+                'comparable_ends' => $comparableEnds,
+                'target_ends' => $group->num_ends,
+                'participant_count' => count($rows),
+                'distance_groups' => $distanceMeta,
+            ],
+        ];
+    }
+
+    /**
+     * A cheap monotonic cursor for the leaderboard —
+     * `{participantCount}:{scorerCount}:{scorerSig}-{maxUpdatedMs}-{status}`
+     * over the group, participants and scorer assignments (task 3.6 / Sprint
+     * 11 task 11.3, expanded in Sprint 19). Counts catch removal,
+     * max(updated_at) catches score changes, the scorer signature catches a
+     * same-millisecond scorer reassignment, and the trailing group status
+     * guarantees lifecycle transitions. Equal version ⇒ nothing changed ⇒ the
+     * poll skips the heavy payload.
+     */
+    public function leaderboardVersion(ScoringSessionGroup $group): string
+    {
+        /** @var object{cnt: int, max_updated: string|null}|null $agg */
+        $agg = $group->participants()
+            ->selectRaw('count(*) as cnt, max(updated_at) as max_updated')
+            ->first();
+        $scorers = $group->scorers()
+            ->orderBy('target_butt')
+            ->get(['target_butt', 'user_id', 'updated_at']);
+
+        $participantsMs = $agg?->max_updated !== null
+            ? Carbon::parse($agg->max_updated)->getTimestampMs()
+            : 0;
+        $scorersMs = $scorers
+            ->map(fn (GroupScorer $scorer): int => $scorer->updated_at?->getTimestampMs() ?? 0)
+            ->max() ?? 0;
+        $groupMs = $group->updated_at?->getTimestampMs() ?? 0;
+        $count = (int) ($agg->cnt ?? 0);
+        $scorerCount = $scorers->count();
+        $scorerSignature = sha1($scorers
+            ->map(fn (GroupScorer $scorer): string => $scorer->target_butt.':'.$scorer->user_id)
+            ->implode('|'));
+
+        return $count.':'.$scorerCount.':'.$scorerSignature.'-'
+            .max($participantsMs, $scorersMs, $groupMs).'-'.$group->status->value;
+    }
+
+    /**
+     * Flatten one participant into the raw figures the leaderboard ranks on.
+     * A "validated" round is an end whose recorded arrow count equals the row's
+     * arrows_per_end — i.e. a round actually shot to completion, not a partial
+     * end still in progress.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildLeaderboardRow(ScoringSession $p): array
+    {
+        $validatedEndTotals = [];
+        foreach ($p->ends as $end) {
+            // arrows_count is supplied by withCount('arrows') on the eager load.
+            if ((int) $end->arrows_count === $p->arrows_per_end) {
+                $validatedEndTotals[] = (int) $end->end_total;
+            }
+        }
+
+        return [
+            'session_id' => $p->id,
+            'user_id' => $p->user_id,
+            'is_guest' => $p->isGuest(),
+            'display_name' => $p->guest_name ?? $p->user?->name,
+            'bow_class' => $p->bow_class?->value,
+            'distance_m' => $p->distance_m,
+            'target_face_cm' => $p->target_face_cm,
+            'distance_key' => $this->distanceKey($p->distance_m, $p->target_face_cm),
+            'distance_label' => $this->distanceLabel($p->distance_m, $p->target_face_cm),
+            'status' => $p->status?->value,
+            'total_score' => (int) $p->total_score,
+            'x_count' => (int) $p->x_count,
+            'ten_count' => (int) $p->ten_count,
+            'arrows_shot' => (int) $p->arrows_shot,
+            'validated_ends' => count($validatedEndTotals),
+            'validated_end_totals' => $validatedEndTotals,
+        ];
+    }
+
+    /**
+     * Rank one fair comparison group. Sprint 20 uses this per distance/face so
+     * a 15m beginner never outranks or trails a 50m archer on the same scale.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array{entries: array<int, array<string, mixed>>, all_completed: bool, comparable_ends: int}
+     */
+    private function rankLeaderboardRows(array $rows, ScoringSessionGroup $group): array
+    {
         // A "racer" is anyone still in the running (not abandoned). A round is
         // provisional until every racer has finished.
         $racers = array_values(array_filter(
@@ -468,83 +714,10 @@ class ScoringSessionGroupService
         usort($rows, static fn (array $a, array $b): int => [$b['rank_metric'], $b['x_count'], $b['ten_count']]
             <=> [$a['rank_metric'], $a['x_count'], $a['ten_count']]);
 
-        $entries = $this->assignRanks($rows, $group, $allCompleted);
-
         return [
-            'entries' => $entries,
-            'meta' => [
-                'version' => $this->leaderboardVersion($group),
-                // The group lifecycle drives the client's lifecycle-aware poll
-                // (Sprint 11, task 11.2): once it leaves `in_progress` the live
-                // screen stops polling — even when another device finished it.
-                'group_status' => $group->status->value,
-                'all_completed' => $allCompleted,
-                'is_provisional' => ! $allCompleted,
-                'comparable_ends' => $comparableEnds,
-                'target_ends' => $group->num_ends,
-                'participant_count' => count($rows),
-            ],
-        ];
-    }
-
-    /**
-     * A cheap monotonic cursor for the leaderboard —
-     * `{count}-{maxUpdatedMs}-{status}` over the group + its participants
-     * (task 3.6 / Sprint 11 task 11.3). The count component catches a
-     * participant being removed; max(updated_at) catches any score change; and
-     * the trailing group status guarantees a lifecycle transition (finish /
-     * abandon) always bumps the cursor — even when the host finishes the group
-     * in the same millisecond as the last arrow, so the lifecycle-aware poll
-     * (11.2) reliably learns it should stop. Equal version ⇒ nothing changed ⇒
-     * the poll skips the heavy payload.
-     */
-    public function leaderboardVersion(ScoringSessionGroup $group): string
-    {
-        /** @var object{cnt: int, max_updated: string|null}|null $agg */
-        $agg = $group->participants()
-            ->selectRaw('count(*) as cnt, max(updated_at) as max_updated')
-            ->first();
-
-        $participantsMs = $agg?->max_updated !== null
-            ? Carbon::parse($agg->max_updated)->getTimestampMs()
-            : 0;
-        $groupMs = $group->updated_at?->getTimestampMs() ?? 0;
-        $count = (int) ($agg->cnt ?? 0);
-
-        return $count.'-'.max($participantsMs, $groupMs).'-'.$group->status->value;
-    }
-
-    /**
-     * Flatten one participant into the raw figures the leaderboard ranks on.
-     * A "validated" round is an end whose recorded arrow count equals the row's
-     * arrows_per_end — i.e. a round actually shot to completion, not a partial
-     * end still in progress.
-     *
-     * @return array<string, mixed>
-     */
-    private function buildLeaderboardRow(ScoringSession $p): array
-    {
-        $validatedEndTotals = [];
-        foreach ($p->ends as $end) {
-            // arrows_count is supplied by withCount('arrows') on the eager load.
-            if ((int) $end->arrows_count === $p->arrows_per_end) {
-                $validatedEndTotals[] = (int) $end->end_total;
-            }
-        }
-
-        return [
-            'session_id' => $p->id,
-            'user_id' => $p->user_id,
-            'is_guest' => $p->isGuest(),
-            'display_name' => $p->guest_name ?? $p->user?->name,
-            'bow_class' => $p->bow_class?->value,
-            'status' => $p->status?->value,
-            'total_score' => (int) $p->total_score,
-            'x_count' => (int) $p->x_count,
-            'ten_count' => (int) $p->ten_count,
-            'arrows_shot' => (int) $p->arrows_shot,
-            'validated_ends' => count($validatedEndTotals),
-            'validated_end_totals' => $validatedEndTotals,
+            'entries' => $this->assignRanks($rows, $group, $allCompleted),
+            'all_completed' => $allCompleted,
+            'comparable_ends' => $comparableEnds,
         ];
     }
 
@@ -574,6 +747,10 @@ class ScoringSessionGroupService
                 'is_guest' => $row['is_guest'],
                 'display_name' => $row['display_name'],
                 'bow_class' => $row['bow_class'],
+                'distance_m' => $row['distance_m'],
+                'target_face_cm' => $row['target_face_cm'],
+                'distance_key' => $row['distance_key'],
+                'distance_label' => $row['distance_label'],
                 'status' => $row['status'],
                 'total_score' => $row['total_score'],
                 'x_count' => $row['x_count'],
@@ -655,6 +832,8 @@ class ScoringSessionGroupService
             $session->id = $attributes['id'];
         }
 
+        $distance = $this->participantDistanceAttributes($attributes, $group);
+
         $session->fill([
             'user_id' => $attributes['user_id'] ?? null,
             'guest_name' => $attributes['guest_name'] ?? null,
@@ -663,10 +842,10 @@ class ScoringSessionGroupService
             'scoring_session_group_id' => $group->id,
             'participation_status' => $attributes['participation_status'],
             'bow_class' => $attributes['bow_class'] ?? null,
-            'distance_category' => $attributes['distance_category'] ?? $group->distance_category->value,
-            'distance_m' => $attributes['distance_m'] ?? $group->distance_m,
+            'distance_category' => $distance['distance_category'],
+            'distance_m' => $distance['distance_m'],
             'environment' => $group->environment->value,
-            'target_face_cm' => $attributes['target_face_cm'] ?? $group->target_face_cm,
+            'target_face_cm' => $distance['target_face_cm'],
             'target_face_id' => $group->target_face_id,
             'target_butt' => $attributes['target_butt'] ?? null,
             'target_letter' => $this->normalizeLetter($attributes['target_letter'] ?? null),
@@ -683,6 +862,79 @@ class ScoringSessionGroupService
         return $session;
     }
 
+    private function actorIsScorerForSession(ScoringSessionGroup $group, User $actor, ScoringSession $session): bool
+    {
+        return $session->target_butt !== null
+            && $group->scorers()
+                ->where('user_id', $actor->id)
+                ->where('target_butt', $session->target_butt)
+                ->exists();
+    }
+
+    private function mayUpdateParticipantDistance(ScoringSession $session): bool
+    {
+        return (int) $session->arrows_shot === 0 && ! $session->ends()->exists();
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function applyParticipantDistance(ScoringSession $session, array $data): void
+    {
+        if (array_key_exists('distance_m', $data) && $data['distance_m'] !== null) {
+            $distance = (int) $data['distance_m'];
+            $session->distance_m = $distance;
+            $session->distance_category = DistanceCategory::from($this->distanceCategoryForMeters($distance));
+        }
+
+        if (array_key_exists('target_face_cm', $data)) {
+            $session->target_face_cm = $data['target_face_cm'];
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array{distance_category: string, distance_m: int, target_face_cm: int|null}
+     */
+    private function participantDistanceAttributes(array $attributes, ScoringSessionGroup $group): array
+    {
+        $distance = (int) ($attributes['distance_m'] ?? $group->distance_m);
+        $category = $attributes['distance_category']
+            ?? (array_key_exists('distance_m', $attributes) && $attributes['distance_m'] !== null
+                ? $this->distanceCategoryForMeters($distance)
+                : $group->distance_category->value);
+
+        return [
+            'distance_category' => $category,
+            'distance_m' => $distance,
+            'target_face_cm' => $attributes['target_face_cm'] ?? $group->target_face_cm,
+        ];
+    }
+
+    private function distanceCategoryForMeters(int $meters): string
+    {
+        $value = "{$meters}m";
+        foreach (DistanceCategory::cases() as $case) {
+            if ($case->value === $value) {
+                return $value;
+            }
+        }
+
+        abort(422, "Jarak {$meters}m belum didukung sebagai kategori statistik.");
+    }
+
+    private function distanceKey(int $distanceM, ?int $targetFaceCm): string
+    {
+        return $distanceM.'m|'.($targetFaceCm ?? 'face-default');
+    }
+
+    private function distanceLabel(int $distanceM, ?int $targetFaceCm): string
+    {
+        return $targetFaceCm === null
+            ? "{$distanceM}m"
+            : "{$distanceM}m / {$targetFaceCm}cm";
+    }
+
     private function groupHasScores(ScoringSessionGroup $group): bool
     {
         return $group->participants()->where('arrows_shot', '>', 0)->exists();
@@ -696,17 +948,56 @@ class ScoringSessionGroupService
      * @param  Collection<int, ScoringSession>  $rows
      * @return array<string, mixed>
      */
-    private function buttBucket(?int $butt, Collection $rows): array
+    private function buttBucket(?int $butt, Collection $rows, ?GroupScorer $scorer): array
     {
+        $progress = $rows->map(fn (ScoringSession $row): int => $this->validatedEndCount($row));
+        $endProgress = (int) ($progress->min() ?? 0);
+        $maxEndProgress = (int) ($progress->max() ?? 0);
+        $participantCount = $rows->count();
+        $completedCount = $rows
+            ->where('status', ScoringSessionStatus::Completed)
+            ->count();
+        $isComplete = $participantCount > 0 && $completedCount === $participantCount;
+        $targetEnds = (int) $rows->first()->num_ends;
+        $submittedCount = $isComplete
+            ? $participantCount
+            : $rows
+                ->filter(fn (ScoringSession $row): bool => $this->validatedEndCount($row) > $endProgress)
+                ->count();
+
         return [
             'target_butt' => $butt,
-            'participant_count' => $rows->count(),
-            'completed_count' => $rows
-                ->where('status', ScoringSessionStatus::Completed)
-                ->count(),
+            'participant_count' => $participantCount,
+            'completed_count' => $completedCount,
+            'submitted_count' => $submittedCount,
+            'pending_count' => max(0, $participantCount - $submittedCount),
+            'end_progress' => $endProgress,
+            'max_end_progress' => $maxEndProgress,
+            'current_end' => $completedCount === $participantCount && $participantCount > 0
+                ? null
+                : min($endProgress + 1, $targetEnds),
+            'target_ends' => $targetEnds,
+            'is_complete' => $isComplete,
             'total_score' => (int) $rows->sum('total_score'),
+            'scorer' => $scorer === null ? null : [
+                'id' => $scorer->id,
+                'user_id' => $scorer->user_id,
+                'target_butt' => $scorer->target_butt,
+                'assignment_type' => $scorer->assignment_type->value,
+                'scorer' => $scorer->user === null ? null : [
+                    'id' => $scorer->user->id,
+                    'name' => $scorer->user->name,
+                ],
+            ],
             'participants' => $rows->values(),
         ];
+    }
+
+    private function validatedEndCount(ScoringSession $session): int
+    {
+        return $session->ends
+            ->filter(fn ($end): bool => (int) $end->arrows_count === $session->arrows_per_end)
+            ->count();
     }
 
     /**

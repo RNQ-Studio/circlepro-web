@@ -13,8 +13,9 @@ use Illuminate\Validation\Rule;
  * Score one participant row of a group — Sprint 03, task 3.1/3.2. The round
  * format is inherited from the group, so only the ends/arrows (+ optional
  * status & idempotency key) are accepted here. Authorization (Phase 0 matrix
- * §4): the host of the group OR the owner of this very session. A denied check
- * returns 404 (privacy) before validation, mirroring the rest of the module.
+ * §4, Sprint 17): the host of the group OR the owner of this very session OR
+ * the scorer assigned to this row's bantalan. A denied check returns 404
+ * (privacy) before validation, mirroring the rest of the module.
  */
 class ScoreGroupParticipantRequest extends FormRequest
 {
@@ -42,8 +43,13 @@ class ScoreGroupParticipantRequest extends FormRequest
 
         $isHost = $user->can('manage', $group);
         $isOwner = $session->user_id !== null && $session->user_id === $user->id;
+        $isAssignedScorer = $session->target_butt !== null
+            && $group->scorers()
+                ->where('user_id', $user->id)
+                ->where('target_butt', $session->target_butt)
+                ->exists();
 
-        return $isHost || $isOwner;
+        return $isHost || $isOwner || $isAssignedScorer;
     }
 
     /**

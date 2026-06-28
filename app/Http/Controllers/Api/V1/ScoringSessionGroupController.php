@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AddGroupParticipantsRequest;
+use App\Http\Requests\Api\V1\AssignGroupScorerRequest;
 use App\Http\Requests\Api\V1\AssignParticipantButtRequest;
+use App\Http\Requests\Api\V1\AssignParticipantDistanceRequest;
 use App\Http\Requests\Api\V1\AutoDistributeButtsRequest;
+use App\Http\Requests\Api\V1\ClaimGroupScorerRequest;
 use App\Http\Requests\Api\V1\JoinScoringSessionGroupRequest;
 use App\Http\Requests\Api\V1\ScoreGroupParticipantRequest;
 use App\Http\Requests\Api\V1\StoreScoringSessionGroupRequest;
 use App\Http\Requests\Api\V1\SyncGroupParticipantsRequest;
 use App\Http\Requests\Api\V1\UpdateScoringSessionGroupRequest;
 use App\Http\Resources\Api\V1\GroupParticipantResource;
+use App\Http\Resources\Api\V1\GroupScorerResource;
 use App\Http\Resources\Api\V1\ScoringSessionGroupResource;
 use App\Models\ScoringSession;
 use App\Models\ScoringSessionGroup;
@@ -184,6 +188,53 @@ class ScoringSessionGroupController extends Controller
     }
 
     /**
+     * Override a participant's real distance/target face before scoring
+     * (Sprint 20). Host can adjust anyone; row owner can adjust themselves.
+     */
+    public function assignParticipantDistance(
+        AssignParticipantDistanceRequest $request,
+        ScoringSessionGroup $group,
+        ScoringSession $session,
+    ): JsonResponse {
+        $participant = $this->groups->assignParticipantDistance($session, $request->validated());
+
+        return ApiResponse::success(
+            new GroupParticipantResource($participant->load('user')),
+            'Jarak peserta diperbarui',
+        );
+    }
+
+    /**
+     * Host assigns or reassigns the scorer for one bantalan (Sprint 17).
+     */
+    public function assignScorer(AssignGroupScorerRequest $request, ScoringSessionGroup $group): JsonResponse
+    {
+        $validated = $request->validated();
+        $scorer = $this->groups->assignScorer(
+            $group,
+            $request->user(),
+            (int) $validated['user_id'],
+            (int) $validated['target_butt'],
+        );
+
+        return ApiResponse::success(new GroupScorerResource($scorer), 'Skorer ditugaskan', 201);
+    }
+
+    /**
+     * A participant claims an unassigned bantalan scorer slot (Sprint 17).
+     */
+    public function claimScorer(ClaimGroupScorerRequest $request, ScoringSessionGroup $group): JsonResponse
+    {
+        $scorer = $this->groups->claimScorer(
+            $group,
+            $request->user(),
+            (int) $request->validated()['target_butt'],
+        );
+
+        return ApiResponse::success(new GroupScorerResource($scorer), 'Bantalan diklaim', 201);
+    }
+
+    /**
      * Round-robin auto-distribute the whole roster across N bantalan in one call
      * (task 16.3) — the throughput linchpin so mapping 23 archers doesn't eat the
      * first whistle. Host-only (FormRequest). Returns the freshly mapped roster.
@@ -213,6 +264,21 @@ class ScoringSessionGroupController extends Controller
     public function butts(Request $request, ScoringSessionGroup $group): JsonResponse
     {
         abort_unless($request->user()->can('view', $group), 404, 'Resource not found.');
+
+        $version = $this->groups->leaderboardVersion($group);
+
+        if ($request->query('version') !== null && $request->query('version') === $version) {
+            return ApiResponse::success(
+                ['butts' => []],
+                'Butts unchanged',
+                200,
+                [
+                    'version' => $version,
+                    'group_status' => $group->status->value,
+                    'unchanged' => true,
+                ],
+            );
+        }
 
         $roster = $this->groups->rosterByButt($group);
 

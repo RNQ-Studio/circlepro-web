@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $user_id NULL = guest participant (group practice)
  * @property string|null $guest_name display name for a player without an account
  * @property int|null $added_by_user_id who created this participant row (host)
+ * @property int|null $last_scored_by_user_id who last wrote the group score row
  * @property string|null $equipment_profile_id
  * @property string|null $organization_id
  * @property string|null $event_division_id
@@ -61,6 +62,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, ScoringEnd> $ends
  * @property-read ScoringSessionGroup|null $group
  * @property-read User|null $addedBy
+ * @property-read User|null $lastScoredBy
  * @property-read Collection<int, ScoringSessionClaim> $claims
  */
 class ScoringSession extends Model
@@ -73,6 +75,7 @@ class ScoringSession extends Model
         'user_id',
         'guest_name',
         'added_by_user_id',
+        'last_scored_by_user_id',
         'equipment_profile_id',
         'organization_id',
         'event_division_id',
@@ -149,6 +152,12 @@ class ScoringSession extends Model
     public function addedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'added_by_user_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function lastScoredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'last_scored_by_user_id');
     }
 
     /** @return HasMany<ScoringSessionClaim, $this> */

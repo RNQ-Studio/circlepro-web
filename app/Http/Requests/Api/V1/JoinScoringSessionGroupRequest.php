@@ -34,6 +34,8 @@ class JoinScoringSessionGroupRequest extends FormRequest
             'id' => ['nullable', 'string', 'size:26'],
             'client_uuid' => ['nullable', 'uuid'],
             'bow_class' => ['nullable', Rule::enum(BowClass::class)],
+            'distance_m' => ['nullable', 'integer', 'min:1', 'max:900'],
+            'target_face_cm' => ['nullable', 'integer', 'min:1', 'max:200'],
             'target_butt' => ['nullable', 'integer', 'min:1', 'max:200'],
             'target_letter' => ['nullable', 'string', 'size:1'],
         ];

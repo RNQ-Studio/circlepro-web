@@ -38,6 +38,7 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, ScoringSession> $participants
  * @property-read Collection<int, ScoringSession> $sessions
  * @property-read Collection<int, ScoringSessionClaim> $claims
+ * @property-read Collection<int, GroupScorer> $scorers
  */
 class ScoringSessionGroup extends Model
 {
@@ -111,5 +112,11 @@ class ScoringSessionGroup extends Model
     public function claims(): HasMany
     {
         return $this->hasMany(ScoringSessionClaim::class);
+    }
+
+    /** @return HasMany<GroupScorer, $this> */
+    public function scorers(): HasMany
+    {
+        return $this->hasMany(GroupScorer::class);
     }
 }

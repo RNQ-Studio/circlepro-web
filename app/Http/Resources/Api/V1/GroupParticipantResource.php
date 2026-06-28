@@ -26,6 +26,7 @@ class GroupParticipantResource extends JsonResource
             'display_name' => $this->guest_name ?? $this->user?->name,
             'guest_name' => $this->guest_name,
             'added_by_user_id' => $this->added_by_user_id,
+            'last_scored_by_user_id' => $this->last_scored_by_user_id,
             'participation_status' => $this->participation_status?->value,
             'bow_class' => $this->bow_class?->value,
             'distance_category' => $this->distance_category?->value,

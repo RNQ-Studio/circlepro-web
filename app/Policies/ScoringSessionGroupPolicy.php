@@ -17,7 +17,9 @@ class ScoringSessionGroupPolicy
     /** Host or a participant may see the group detail, roster & leaderboard. */
     public function view(User $user, ScoringSessionGroup $group): bool
     {
-        return $this->isHost($user, $group) || $this->isParticipant($user, $group);
+        return $this->isHost($user, $group)
+            || $this->isParticipant($user, $group)
+            || $this->isScorer($user, $group);
     }
 
     /**
@@ -37,5 +39,10 @@ class ScoringSessionGroupPolicy
     private function isParticipant(User $user, ScoringSessionGroup $group): bool
     {
         return $group->participants()->where('user_id', $user->id)->exists();
+    }
+
+    private function isScorer(User $user, ScoringSessionGroup $group): bool
+    {
+        return $group->scorers()->where('user_id', $user->id)->exists();
     }
 }

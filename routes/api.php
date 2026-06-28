@@ -173,8 +173,13 @@ Route::prefix('v1')->group(function (): void {
                 // Sprint 16 — bantalan mapping: move a participant's butt,
                 // round-robin auto-distribute, and the grouped roster (Phase 3).
                 Route::patch('{group}/participants/{session}/butt', [ScoringSessionGroupController::class, 'assignParticipantButt']);
+                Route::patch('{group}/participants/{session}/distance', [ScoringSessionGroupController::class, 'assignParticipantDistance']);
                 Route::post('{group}/auto-distribute', [ScoringSessionGroupController::class, 'autoDistribute']);
                 Route::get('{group}/butts', [ScoringSessionGroupController::class, 'butts']);
+
+                // Sprint 17 — scorer-per-bantalan assignment and claiming.
+                Route::post('{group}/scorers/assign', [ScoringSessionGroupController::class, 'assignScorer']);
+                Route::post('{group}/scorers/claim', [ScoringSessionGroupController::class, 'claimScorer']);
 
                 // Sprint 03 — offline-first scoring & fair leaderboard.
                 Route::put('{group}/participants/{session}/score', [ScoringSessionGroupController::class, 'scoreParticipant']);

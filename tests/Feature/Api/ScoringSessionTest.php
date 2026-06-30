@@ -72,6 +72,48 @@ class ScoringSessionTest extends TestCase
         ]);
     }
 
+    public function test_sighter_ends_are_stored_but_excluded_from_aggregates_and_pb(): void
+    {
+        Passport::actingAs(User::factory()->create());
+
+        $payload = $this->sessionPayload(status: 'completed');
+        $payload['num_ends'] = 3;
+        array_unshift($payload['ends'], [
+            'end_number' => 1,
+            'is_sighter' => true,
+            'arrows' => [
+                ['arrow_index' => 0, 'score_value' => 10, 'is_x' => true, 'is_miss' => false],
+                ['arrow_index' => 1, 'score_value' => 10, 'is_x' => false, 'is_miss' => false],
+                ['arrow_index' => 2, 'score_value' => 10, 'is_x' => false, 'is_miss' => false],
+            ],
+        ]);
+        $payload['ends'][1]['end_number'] = 2;
+        $payload['ends'][2]['end_number'] = 3;
+
+        $this->postJson('/api/v1/scoring/sessions', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.ends.0.is_sighter', true)
+            ->assertJsonPath('data.ends.0.end_total', 30)
+            ->assertJsonPath('data.total_score', 45)
+            ->assertJsonPath('data.arrows_shot', 6)
+            ->assertJsonPath('data.x_count', 1)
+            ->assertJsonPath('data.ten_count', 2)
+            ->assertJsonPath('data.max_possible_score', 60)
+            ->assertJsonPath('data.avg_per_arrow', 7.5)
+            ->assertJsonPath('data.is_personal_best', true);
+
+        $this->assertDatabaseHas('personal_bests', [
+            'bow_class' => 'recurve',
+            'distance_category' => '70m',
+            'num_arrows' => 6,
+            'best_score' => 45,
+        ]);
+        $this->assertDatabaseMissing('personal_bests', [
+            'num_arrows' => 9,
+            'best_score' => 75,
+        ]);
+    }
+
     public function test_sync_is_idempotent_by_client_uuid(): void
     {
         Passport::actingAs(User::factory()->create());

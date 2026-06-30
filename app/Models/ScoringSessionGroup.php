@@ -27,6 +27,9 @@ use Illuminate\Support\Carbon;
  * @property string|null $target_face_id
  * @property int $num_ends
  * @property int $arrows_per_end
+ * @property int $sighter_end_count
+ * @property string|null $round_preset_key
+ * @property string|null $round_preset_label
  * @property string $join_code
  * @property ScoringSessionStatus $status
  * @property Carbon $started_at
@@ -57,6 +60,9 @@ class ScoringSessionGroup extends Model
         'target_face_id',
         'num_ends',
         'arrows_per_end',
+        'sighter_end_count',
+        'round_preset_key',
+        'round_preset_label',
         'join_code',
         'status',
         'started_at',
@@ -69,6 +75,7 @@ class ScoringSessionGroup extends Model
             'distance_category' => DistanceCategory::class,
             'environment' => ArcheryEnvironment::class,
             'status' => ScoringSessionStatus::class,
+            'sighter_end_count' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];

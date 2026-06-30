@@ -19,6 +19,7 @@ class ScoringEndResource extends JsonResource
         return [
             'id' => $this->id,
             'end_number' => $this->end_number,
+            'is_sighter' => (bool) $this->is_sighter,
             'end_total' => $this->end_total,
             'arrows' => ScoringArrowResource::collection($this->whenLoaded('arrows')),
         ];

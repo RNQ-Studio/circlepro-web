@@ -34,7 +34,10 @@ class ScoringSessionGroupService
 
     private const JOIN_CODE_LENGTH = 6;
 
-    public function __construct(private readonly ScoringService $scoring) {}
+    public function __construct(
+        private readonly ScoringService $scoring,
+        private readonly ParticipantProgressInsightService $progressInsights,
+    ) {}
 
     /**
      * Create a group with a unique join_code; the caller becomes the host.
@@ -57,6 +60,12 @@ class ScoringSessionGroupService
                 'target_face_id' => $data['target_face_id'] ?? null,
                 'num_ends' => $data['num_ends'],
                 'arrows_per_end' => $data['arrows_per_end'] ?? 6,
+                'sighter_end_count' => min(
+                    (int) ($data['sighter_end_count'] ?? 0),
+                    max(0, (int) $data['num_ends'] - 1),
+                ),
+                'round_preset_key' => $data['round_preset_key'] ?? null,
+                'round_preset_label' => $data['round_preset_label'] ?? null,
                 'join_code' => $this->generateJoinCode(),
                 'status' => ScoringSessionStatus::InProgress->value,
                 'started_at' => $data['started_at'] ?? now(),
@@ -396,6 +405,7 @@ class ScoringSessionGroupService
             $formatKeys = [
                 'distance_category', 'distance_m', 'environment',
                 'target_face_cm', 'target_face_id', 'num_ends', 'arrows_per_end',
+                'sighter_end_count', 'round_preset_key', 'round_preset_label',
             ];
 
             $changingFormat = array_intersect_key($data, array_flip($formatKeys)) !== [];
@@ -414,7 +424,9 @@ class ScoringSessionGroupService
 
             foreach (['title', ...$formatKeys] as $key) {
                 if (array_key_exists($key, $data)) {
-                    $group->{$key} = $data[$key];
+                    $group->{$key} = $key === 'sighter_end_count'
+                        ? min((int) $data[$key], max(0, (int) $group->num_ends - 1))
+                        : $data[$key];
                 }
             }
 
@@ -545,7 +557,7 @@ class ScoringSessionGroupService
     public function leaderboard(ScoringSessionGroup $group): array
     {
         $participants = $group->participants()
-            ->with(['user:id,name', 'ends' => fn ($q) => $q->withCount('arrows')])
+            ->with(['user:id,name', 'ends' => fn ($q) => $q->withCount('arrows')->with('arrows')])
             ->get();
 
         $rows = $participants->map(fn (ScoringSession $p): array => $this->buildLeaderboardRow($p))->all();
@@ -582,8 +594,11 @@ class ScoringSessionGroupService
             }
         }
 
+        $entries = $this->markImprovementLeader($entries);
+
         $allCompleted = $allCompletedMeta !== [] && ! in_array(false, $allCompletedMeta, true);
         $comparableEnds = $comparableEndsMeta === [] ? 0 : min($comparableEndsMeta);
+        $targetEnds = $this->countedTargetEnds($group);
 
         return [
             'entries' => $entries,
@@ -596,7 +611,7 @@ class ScoringSessionGroupService
                 'all_completed' => $allCompleted,
                 'is_provisional' => ! $allCompleted,
                 'comparable_ends' => $comparableEnds,
-                'target_ends' => $group->num_ends,
+                'target_ends' => $targetEnds,
                 'participant_count' => count($rows),
                 'distance_groups' => $distanceMeta,
             ],
@@ -653,7 +668,7 @@ class ScoringSessionGroupService
         $validatedEndTotals = [];
         foreach ($p->ends as $end) {
             // arrows_count is supplied by withCount('arrows') on the eager load.
-            if ((int) $end->arrows_count === $p->arrows_per_end) {
+            if (! (bool) $end->is_sighter && (int) $end->arrows_count === $p->arrows_per_end) {
                 $validatedEndTotals[] = (int) $end->end_total;
             }
         }
@@ -675,6 +690,7 @@ class ScoringSessionGroupService
             'arrows_shot' => (int) $p->arrows_shot,
             'validated_ends' => count($validatedEndTotals),
             'validated_end_totals' => $validatedEndTotals,
+            'skill_insight' => $this->progressInsights->forSession($p),
         ];
     }
 
@@ -757,10 +773,12 @@ class ScoringSessionGroupService
                 'ten_count' => $row['ten_count'],
                 'arrows_shot' => $row['arrows_shot'],
                 'validated_ends' => $row['validated_ends'],
-                'target_ends' => $group->num_ends,
+                'target_ends' => $this->countedTargetEnds($group),
                 // Honest live figure: total on the common number of rounds (K3).
                 'comparable_total' => $row['comparable_total'],
                 'is_complete' => $row['status'] === ScoringSessionStatus::Completed->value,
+                'is_improvement_leader' => false,
+                'skill_insight' => $row['skill_insight'],
             ];
         }
 
@@ -770,6 +788,36 @@ class ScoringSessionGroupService
         foreach ($entries as &$entry) {
             $entry['tied'] = $rankCounts[$entry['rank']] > 1;
             $entry['is_provisional_leader'] = ! $allCompleted && $entry['rank'] === 1 && ! $entry['tied'];
+        }
+        unset($entry);
+
+        return $entries;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $entries
+     * @return array<int, array<string, mixed>>
+     */
+    private function markImprovementLeader(array $entries): array
+    {
+        $leaderIndex = null;
+        $leaderDelta = 0.0;
+
+        foreach ($entries as $index => $entry) {
+            $delta = $entry['skill_insight']['baseline']['delta_vs_average'] ?? null;
+            if (! is_numeric($delta) || (float) $delta <= 0.0) {
+                continue;
+            }
+
+            if ($leaderIndex === null || (float) $delta > $leaderDelta) {
+                $leaderIndex = $index;
+                $leaderDelta = (float) $delta;
+            }
+        }
+
+        foreach ($entries as $index => &$entry) {
+            $entry['is_improvement_leader'] = $leaderIndex !== null && $index === $leaderIndex;
+            $entry['skill_insight']['is_improvement_leader'] = $entry['is_improvement_leader'];
         }
         unset($entry);
 
@@ -937,7 +985,18 @@ class ScoringSessionGroupService
 
     private function groupHasScores(ScoringSessionGroup $group): bool
     {
-        return $group->participants()->where('arrows_shot', '>', 0)->exists();
+        return $group->participants()
+            ->where(function ($query): void {
+                $query
+                    ->where('arrows_shot', '>', 0)
+                    ->orWhereHas('ends.arrows');
+            })
+            ->exists();
+    }
+
+    private function countedTargetEnds(ScoringSessionGroup $group): int
+    {
+        return max(0, (int) $group->num_ends - (int) $group->sighter_end_count);
     }
 
     /**

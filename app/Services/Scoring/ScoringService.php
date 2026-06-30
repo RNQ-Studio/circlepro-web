@@ -167,9 +167,15 @@ class ScoringService
         $session->ends()->delete(); // cascades to arrows
 
         foreach ($ends as $endData) {
+            $endNumber = (int) $endData['end_number'];
+            $isSighter = array_key_exists('is_sighter', $endData)
+                ? (bool) $endData['is_sighter']
+                : $endNumber <= $this->declaredSighterEndCount($session);
+
             $end = $session->ends()->create([
                 'id' => $endData['id'] ?? null,
-                'end_number' => $endData['end_number'],
+                'end_number' => $endNumber,
+                'is_sighter' => $isSighter,
                 'end_total' => 0,
             ]);
 
@@ -195,6 +201,8 @@ class ScoringService
 
             $end->update(['end_total' => $endTotal]);
         }
+
+        $session->unsetRelation('ends');
     }
 
     /**
@@ -202,7 +210,7 @@ class ScoringService
      */
     public function recomputeAggregates(ScoringSession $session): void
     {
-        $session->loadMissing('ends.arrows');
+        $session->load('ends.arrows');
 
         $totalScore = 0;
         $arrowsShot = 0;
@@ -211,6 +219,10 @@ class ScoringService
         $missCount = 0;
 
         foreach ($session->ends as $end) {
+            if ($end->is_sighter) {
+                continue;
+            }
+
             foreach ($end->arrows as $arrow) {
                 $arrowsShot++;
                 $totalScore += $arrow->score_value;
@@ -234,8 +246,16 @@ class ScoringService
             }
         }
 
+        $actualSighterEnds = $session->ends
+            ->filter(fn ($end): bool => (bool) $end->is_sighter)
+            ->pluck('end_number')
+            ->unique()
+            ->count();
+        $sighterEndCount = max($actualSighterEnds, $this->declaredSighterEndCount($session));
+        $countedEndCount = max(0, (int) $session->num_ends - $sighterEndCount);
+
         $session->total_score = $totalScore;
-        $session->max_possible_score = $session->num_ends * $session->arrows_per_end * $maxArrowValue;
+        $session->max_possible_score = $countedEndCount * $session->arrows_per_end * $maxArrowValue;
         $session->arrows_shot = $arrowsShot;
         $session->avg_per_arrow = $arrowsShot > 0 ? round($totalScore / $arrowsShot, 2) : null;
         $session->x_count = $xCount;
@@ -283,8 +303,15 @@ class ScoringService
     {
         $session->loadMissing('ends.arrows');
 
-        $endTotals = $session->ends->map(fn ($end): int => $end->end_total)->values()->all();
-        $arrowValues = $session->ends
+        $countedEnds = $session->ends->filter(fn ($end): bool => ! (bool) $end->is_sighter);
+        $sighterEndTotals = $session->ends
+            ->filter(fn ($end): bool => (bool) $end->is_sighter)
+            ->map(fn ($end): int => $end->end_total)
+            ->values()
+            ->all();
+
+        $endTotals = $countedEnds->map(fn ($end): int => $end->end_total)->values()->all();
+        $arrowValues = $countedEnds
             ->flatMap(fn ($end) => $end->arrows->map(fn ($a): int => $a->score_value))
             ->values()->all();
 
@@ -308,6 +335,7 @@ class ScoringService
             'miss_count' => $session->miss_count,
             'is_personal_best' => $session->is_personal_best,
             'end_totals' => $endTotals,
+            'sighter_end_totals' => $sighterEndTotals,
             'best_end' => $endTotals === [] ? null : max($endTotals),
             'worst_end' => $endTotals === [] ? null : min($endTotals),
             // Grouping consistency: lower std-dev of arrow values = tighter. We
@@ -323,6 +351,19 @@ class ScoringService
                     : null,
             ],
         ];
+    }
+
+    private function declaredSighterEndCount(ScoringSession $session): int
+    {
+        if ($session->scoring_session_group_id === null) {
+            return 0;
+        }
+
+        $group = $session->relationLoaded('group')
+            ? $session->group
+            : $session->group()->first(['id', 'sighter_end_count']);
+
+        return max(0, (int) $group->sighter_end_count);
     }
 
     /**

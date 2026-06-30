@@ -66,6 +66,7 @@ class ScoringSessionRules
             "{$prefix}ends" => ['nullable', 'array'],
             "{$prefix}ends.*.id" => ['nullable', 'ulid'],
             "{$prefix}ends.*.end_number" => ['required_with:'."{$prefix}ends", 'integer', 'min:1'],
+            "{$prefix}ends.*.is_sighter" => ['sometimes', 'boolean'],
             "{$prefix}ends.*.arrows" => ['nullable', 'array'],
             "{$prefix}ends.*.arrows.*.id" => ['nullable', 'ulid'],
             "{$prefix}ends.*.arrows.*.arrow_index" => ['required', 'integer', 'min:0'],

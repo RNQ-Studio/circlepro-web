@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $scoring_session_id
  * @property int $end_number
+ * @property bool $is_sighter
  * @property int $end_total
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -27,8 +28,16 @@ class ScoringEnd extends Model
         'id',
         'scoring_session_id',
         'end_number',
+        'is_sighter',
         'end_total',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_sighter' => 'boolean',
+        ];
+    }
 
     /** @return BelongsTo<ScoringSession, $this> */
     public function session(): BelongsTo

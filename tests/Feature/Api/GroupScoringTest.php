@@ -244,6 +244,125 @@ class GroupScoringTest extends TestCase
         ]);
     }
 
+    public function test_group_sighter_count_auto_marks_initial_ends_and_leaderboard_ignores_them(): void
+    {
+        $host = User::factory()->create();
+        [$groupId, $ids] = $this->hostGroupWithGuests($host, ['Ayu', 'Bima'], [
+            'num_ends' => 2,
+            'sighter_end_count' => 1,
+            'round_preset_key' => 'wa_18m_indoor',
+            'round_preset_label' => 'WA 18m Indoor',
+        ]);
+
+        $this->getJson("/api/v1/scoring/groups/{$groupId}")
+            ->assertOk()
+            ->assertJsonPath('data.sighter_end_count', 1)
+            ->assertJsonPath('data.round_preset_key', 'wa_18m_indoor')
+            ->assertJsonPath('data.round_preset_label', 'WA 18m Indoor');
+
+        // Ayu wins warm-up 30-0, but Bima wins the scored end 27-21.
+        $this->scoreCompleted($groupId, $ids[0], [[10, 10, 10], [7, 7, 7]]);
+        $this->scoreCompleted($groupId, $ids[1], [[0, 0, 0], [9, 9, 9]]);
+
+        $this->assertSame(21, (int) ScoringSession::find($ids[0])->total_score);
+        $this->assertSame(27, (int) ScoringSession::find($ids[1])->total_score);
+        $this->assertDatabaseHas('scoring_ends', [
+            'scoring_session_id' => $ids[0],
+            'end_number' => 1,
+            'is_sighter' => true,
+            'end_total' => 30,
+        ]);
+
+        $entries = $this->getJson("/api/v1/scoring/groups/{$groupId}/leaderboard")
+            ->assertOk()
+            ->assertJsonPath('meta.target_ends', 1)
+            ->json('data.entries');
+
+        $this->assertSame($ids[1], $entries[0]['session_id']);
+        $this->assertSame(27, $entries[0]['total_score']);
+        $this->assertSame(1, $entries[0]['validated_ends']);
+    }
+
+    public function test_leaderboard_marks_most_improved_without_replacing_total_ranking(): void
+    {
+        $host = User::factory()->create();
+        $steady = User::factory()->create();
+        $improver = User::factory()->create();
+
+        Passport::actingAs($host);
+        $groupId = $this->postJson('/api/v1/scoring/groups', $this->groupPayload([
+            'num_ends' => 2,
+        ]))->json('data.id');
+
+        ScoringSession::factory()->for($steady)->create([
+            'bow_class' => 'recurve',
+            'distance_category' => '50m',
+            'distance_m' => 50,
+            'target_face_cm' => 122,
+            'num_ends' => 2,
+            'arrows_per_end' => 3,
+            'status' => ScoringSessionStatus::Completed->value,
+            'total_score' => 50,
+            'arrows_shot' => 6,
+            'started_at' => now()->subDays(5),
+            'completed_at' => now()->subDays(5),
+        ]);
+        ScoringSession::factory()->for($improver)->create([
+            'bow_class' => 'recurve',
+            'distance_category' => '50m',
+            'distance_m' => 50,
+            'target_face_cm' => 122,
+            'num_ends' => 2,
+            'arrows_per_end' => 3,
+            'status' => ScoringSessionStatus::Completed->value,
+            'total_score' => 24,
+            'arrows_shot' => 6,
+            'started_at' => now()->subDays(5),
+            'completed_at' => now()->subDays(5),
+        ]);
+
+        $steadyRow = ScoringSession::factory()->for($steady)->create([
+            'scoring_session_group_id' => $groupId,
+            'added_by_user_id' => $host->id,
+            'bow_class' => 'recurve',
+            'distance_category' => '50m',
+            'distance_m' => 50,
+            'target_face_cm' => 122,
+            'num_ends' => 2,
+            'arrows_per_end' => 3,
+            'status' => ScoringSessionStatus::InProgress->value,
+        ]);
+        $improverRow = ScoringSession::factory()->for($improver)->create([
+            'scoring_session_group_id' => $groupId,
+            'added_by_user_id' => $host->id,
+            'bow_class' => 'recurve',
+            'distance_category' => '50m',
+            'distance_m' => 50,
+            'target_face_cm' => 122,
+            'num_ends' => 2,
+            'arrows_per_end' => 3,
+            'status' => ScoringSessionStatus::InProgress->value,
+        ]);
+
+        Passport::actingAs($host);
+        $this->scoreCompleted($groupId, $steadyRow->id, [[9, 9, 9], [9, 9, 9]]); // 54, +4
+        $this->scoreCompleted($groupId, $improverRow->id, [[8, 8, 8], [8, 8, 8]]); // 48, +24
+
+        $entries = $this->getJson("/api/v1/scoring/groups/{$groupId}/leaderboard")
+            ->assertOk()
+            ->json('data.entries');
+
+        $this->assertSame($steadyRow->id, $entries[0]['session_id']);
+        $this->assertSame(1, $entries[0]['rank']);
+        $this->assertFalse($entries[0]['is_improvement_leader']);
+
+        $this->assertSame($improverRow->id, $entries[1]['session_id']);
+        $this->assertSame(2, $entries[1]['rank']);
+        $this->assertTrue($entries[1]['is_improvement_leader']);
+        $this->assertEquals(24.0, $entries[1]['skill_insight']['baseline']['delta_vs_average']);
+        $this->assertSame([24, 24], array_column($entries[1]['skill_insight']['end_trend'], 'total'));
+    }
+
     public function test_non_host_participant_cannot_sync_a_row_they_do_not_own(): void
     {
         $host = User::factory()->create();

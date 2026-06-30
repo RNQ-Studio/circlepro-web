@@ -44,6 +44,9 @@ class UpdateScoringSessionGroupRequest extends FormRequest
             'target_face_id' => ['sometimes', 'nullable', 'string', 'exists:target_faces,id'],
             'num_ends' => ['sometimes', 'integer', 'min:1', 'max:60'],
             'arrows_per_end' => ['sometimes', 'integer', 'min:1', 'max:12'],
+            'sighter_end_count' => ['sometimes', 'integer', 'min:0', 'max:20'],
+            'round_preset_key' => ['sometimes', 'nullable', 'string', 'max:64'],
+            'round_preset_label' => ['sometimes', 'nullable', 'string', 'max:80'],
             'status' => ['sometimes', Rule::enum(ScoringSessionStatus::class)],
         ];
     }
